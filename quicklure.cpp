@@ -9,8 +9,15 @@
 #include <regex>
 #include <sstream>
 #include <tuple>
+#include <unistd.h>
 #include <unordered_set>
 #include <vector>
+
+static std::regex FASTA_REGEX(">?(.+):(\\d+)-(\\d+)");
+static std::regex PROBE_REGEX(">(.+):(\\d+)-(\\d+) (.+) (\\d+) (\\d+) (\\d+)");
+static std::regex GAP_REGEX("(.+)\\t(\\d+)\\t(\\d+)\\t(\\d+)");
+static std::regex PROBE_NO_OVERLAP_REGEX("(.+) (\\d+) (\\d+) (.+) (\\d+) (\\d+) (\\d+)");
+static std::regex GAP_PASS_2_REGEX("(.+) (\\d+) (\\d+)");
 
 void ScanProbesPass1(std::string candidatesFastaFilename, int repeatThresh, int GCThresh1, int GCThresh2, int GCThresh3, int GCThresh4,
   std::string probeListFilename, std::string issueProbesFilename, std::string issueSitesFilename, std::string side)
@@ -94,13 +101,14 @@ void ScanProbesPass1(std::string candidatesFastaFilename, int repeatThresh, int 
         pl_file << backup << std::endl;
       else
       {
-        std::regex rgx(">(chr.+):(\\d+)-(\\d+)");
         std::smatch matches;
-        std::regex_search(first_description, matches, rgx);
-        std::string chromosome = matches[1].str();
-        int start = stoi(matches[2].str());
-        int end = stoi(matches[3].str());
-        is_file << "No " << side << " probes found for:" << chromosome << ' ' << (side == "upstream" ? end : start) << std::endl;
+        if(std::regex_search(first_description, matches, FASTA_REGEX))
+        {
+          std::string chromosome = matches[1].str();
+          int start = stoi(matches[2].str());
+          int end = stoi(matches[3].str());
+          is_file << "No " << side << " probes found for:" << chromosome << ' ' << (side == "upstream" ? end : start) << std::endl;
+        }
       }
     }
     fasta.close();
@@ -172,12 +180,13 @@ void ScanProbesPass2_3(std::string candidatesFastaFilename, int repeatThresh, in
             }
             else
               ip_file << description << ' ' << counter << ' ' << GC << std::endl;
-            std::regex rgx(">(.+):(\\d+)-(\\d+)");
             std::smatch matches;
-            std::regex_search(description, matches, rgx);
-            chromosome = matches[1].str();
-            pos1 = stoi(matches[2].str());
-            pos2 = stoi(matches[3].str());
+            if(std::regex_search(description, matches, FASTA_REGEX))
+            {
+              chromosome = matches[1].str();
+              pos1 = stoi(matches[2].str());
+              pos2 = stoi(matches[3].str());
+            }
           }
         }
         if(c == EOF)
@@ -191,12 +200,13 @@ void ScanProbesPass2_3(std::string candidatesFastaFilename, int repeatThresh, in
         description = line;
         if(chromosome.empty())
         {
-          std::regex rgx(">(.+):(\\d+)-(\\d+)");
           std::smatch matches;
-          std::regex_search(description, matches, rgx);
-          chromosome = matches[1].str();
-          pos1 = stoi(matches[2].str());
-          pos2 = stoi(matches[3].str());
+          if(std::regex_search(description, matches, FASTA_REGEX))
+          {
+            chromosome = matches[1].str();
+            pos1 = stoi(matches[2].str());
+            pos2 = stoi(matches[3].str());
+          }
         }
       }
       else
@@ -211,45 +221,75 @@ void ScanProbesPass2_3(std::string candidatesFastaFilename, int repeatThresh, in
   }
 }
 
-int main()
+int main(int argc, char **argv)
 {
+  int c;
   std::string genome = "hg19";
-  std::string restriction_enzyme = "DpnII";
-  std::string re_filename = "/Users/cwenger/Desktop/Doug/lure++/" + genome + '_' + restriction_enzyme + ".txt";
-  std::string rs_filename = "/Users/cwenger/Desktop/Doug/lure++/output/restriction_sites.txt";
-  std::string tcb_filename = "/Users/cwenger/Desktop/Doug/lure++/output/tmp_candidates.bed";
-  std::string tcf_filename = "/Users/cwenger/Desktop/Doug/lure++/output/tmp_candidates.fa";
-  std::string tb_bin_filename = "/Users/cwenger/Desktop/Doug/lure++/eric_scripts/twoBitToFa";
-  std::string tb_filename = "/Users/cwenger/Desktop/Doug/lure++/eric_scripts/hg19.2bit";
-  std::string pnp_filename = "/Users/cwenger/Desktop/Doug/lure++/output/probes_no_primers.txt";
-  std::string ip_filename = "/Users/cwenger/Desktop/Doug/lure++/output/issue_probes.txt";
-  std::string is_filename = "/Users/cwenger/Desktop/Doug/lure++/output/issue_restriction_sites.txt";
-  std::string pnps_filename = "/Users/cwenger/Desktop/Doug/lure++/output/probes_no_primers_sorted.txt";
-  std::string pnpno_filename = "/Users/cwenger/Desktop/Doug/lure++/output/probes_no_primers_no_overlaps.txt";
-  std::string gaps_filename = "/Users/cwenger/Desktop/Doug/lure++/output/gaps.txt";
-  std::string pnpnop2_filename = "/Users/cwenger/Desktop/Doug/lure++/output/probes_no_primers_no_overlaps_pass2.txt";
-  std::string ipp2_filename = "/Users/cwenger/Desktop/Doug/lure++/output/issue_probes_pass2.txt";
-  std::string ig_filename = "/Users/cwenger/Desktop/Doug/lure++/output/issue_gaps.txt";
-  std::string pnpnop2s_filename = "/Users/cwenger/Desktop/Doug/lure++/output/probes_no_primers_no_overlaps_pass2_sorted.txt";
-  std::string gapsp2_filename = "/Users/cwenger/Desktop/Doug/lure++/output/gaps_pass2.txt";
-  std::string pnpnop3_filename = "/Users/cwenger/Desktop/Doug/lure++/output/probes_no_primers_no_overlaps_pass3.txt";
-  std::string ipp3_filename = "/Users/cwenger/Desktop/Doug/lure++/output/issue_probes_pass3.txt";
-  std::string igp2_filename = "/Users/cwenger/Desktop/Doug/lure++/output/issue_gaps_pass2.txt";
-  std::string pnpnop3s_filename = "/Users/cwenger/Desktop/Doug/lure++/output/probes_no_primers_no_overlaps_pass3_sorted.txt";
-  std::string pwpno_filename = "/Users/cwenger/Desktop/Doug/lure++/output/probes_w_primers_no_overlaps.txt";
-  int max_length_from_rs = 80;
-  int max_length_from_rs2 = 110;
-  std::string forward_primer = "ATCGCACCAGCGTGT";
-  std::string reverse_primer = "CACTGCGGCTCCTCA";
+  std::string location = "chr8:133000000-133100000";
+  std::string bed;
+  std::string output_directory = "./output";
+  while ((c = getopt (argc, argv, "g:l:b:o:")) != -1)
+  {
+    switch (c)
+    {
+      case 'g':
+        genome = optarg;
+        break;
+      case 'l':
+        location = optarg;
+        break;
+      case 'b':
+        bed = optarg;
+        break;
+      case 'o':
+        output_directory = optarg;
+        break;
+      case '?':
+        return 1;
+    }
+  }
 
-  std::string location = "chr8:133000000-134000000";
-  std::regex rgx("(chr.+):(\\d+)-(\\d+)");
+  const std::string restriction_enzyme = "DpnII";
+  const std::string input_directory = ".";
+  const std::string re_filename = input_directory + '/' + genome + '_' + restriction_enzyme + ".txt";
+  const std::string tb_bin_filename = input_directory + "/twoBitToFa";
+  const std::string tb_filename = input_directory + "/hg19.2bit";
+  const std::string rs_filename = output_directory + "/restriction_sites.txt";
+  const std::string tcb_filename = output_directory + "/tmp_candidates.bed";
+  const std::string tcf_filename = output_directory + "/tmp_candidates.fa";
+  const std::string pnp_filename = output_directory + "/probes_no_primers.txt";
+  const std::string ip_filename = output_directory + "/issue_probes.txt";
+  const std::string is_filename = output_directory + "/issue_restriction_sites.txt";
+  const std::string pnps_filename = output_directory + "/probes_no_primers_sorted.txt";
+  const std::string pnpno_filename = output_directory + "/probes_no_primers_no_overlaps.txt";
+  const std::string gaps_filename = output_directory + "/gaps.txt";
+  const std::string pnpnop2_filename = output_directory + "/probes_no_primers_no_overlaps_pass2.txt";
+  const std::string ipp2_filename = output_directory + "/issue_probes_pass2.txt";
+  const std::string ig_filename = output_directory + "/issue_gaps.txt";
+  const std::string pnpnop2s_filename = output_directory + "/probes_no_primers_no_overlaps_pass2_sorted.txt";
+  const std::string gapsp2_filename = output_directory + "/gaps_pass2.txt";
+  const std::string pnpnop3_filename = output_directory + "/probes_no_primers_no_overlaps_pass3.txt";
+  const std::string ipp3_filename = output_directory + "/issue_probes_pass3.txt";
+  const std::string igp2_filename = output_directory + "/issue_gaps_pass2.txt";
+  const std::string pnpnop3s_filename = output_directory + "/probes_no_primers_no_overlaps_pass3_sorted.txt";
+  const std::string pwpno_filename = output_directory + "/probes_w_primers_no_overlaps.txt";
+  const int max_length_from_rs = 80;
+  const int max_length_from_rs2 = 110;
+  const std::string forward_primer = "ATCGCACCAGCGTGT";
+  const std::string reverse_primer = "CACTGCGGCTCCTCA";
+
   std::smatch matches;
-  std::regex_search(location, matches, rgx);
-  std::string chromosome = matches[1].str();
-  std::string chromosome_number = chromosome.substr(3);
-  int start = stoi(matches[2].str());
-  int end = stoi(matches[3].str());
+  std::string chromosome;
+  std::string chromosome_number;
+  int start;
+  int end;
+  if(std::regex_search(location, matches, FASTA_REGEX))
+  {
+    chromosome = matches[1].str();
+    chromosome_number = chromosome.substr(3);
+    start = stoi(matches[2].str());
+    end = stoi(matches[3].str());
+  }
 
   std::ifstream re_file(re_filename);
   std::ofstream rs_file_out(rs_filename);
@@ -314,17 +354,18 @@ int main()
     std::string line;
     while(getline(pnp_file, line))
     {
-      std::regex rgx(">(.+):(\\d+)-(\\d+) (.+) (\\d+) (\\d+) (\\d+)");
       std::smatch matches;
-      std::regex_search(line, matches, rgx);
-      std::string chromosome = matches[1].str();
-      int start = stoi(matches[2].str());
-      int end = stoi(matches[3].str());
-      std::string sequence = matches[4].str();
-      int length = stoi(matches[5].str());
-      int counter = stoi(matches[6].str());
-      int GC = stoi(matches[7].str());
-      probes.push_back(std::tuple<std::string, int, int, std::string, int, int, int>(chromosome, start, end, sequence, length, counter, GC));
+      if(std::regex_search(line, matches, PROBE_REGEX))
+      {
+        std::string chromosome = matches[1].str();
+        int start = stoi(matches[2].str());
+        int end = stoi(matches[3].str());
+        std::string sequence = matches[4].str();
+        int length = stoi(matches[5].str());
+        int counter = stoi(matches[6].str());
+        int GC = stoi(matches[7].str());
+        probes.push_back(std::tuple<std::string, int, int, std::string, int, int, int>(chromosome, start, end, sequence, length, counter, GC));
+      }
     }
     pnp_file.close();
   }
@@ -398,22 +439,23 @@ int main()
     while(getline(gaps_file_in, line))
     {
       l++;
-      std::regex rgx("(.+)\\t(\\d+)\\t(\\d+)\\t(\\d+)");
       std::smatch matches;
-      std::regex_search(line, matches, rgx);
-      std::string chromosome = matches[1].str();
-      int start = stoi(matches[2].str());
-      int end = stoi(matches[3].str());
-      std::ofstream tcb_file(tcb_filename);
-      if(tcb_file.is_open())
+      if(std::regex_search(line, matches, GAP_REGEX))
       {
-        for(int i = start; i <= end-120; i++)
-          if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
-            tcb_file << chromosome << '\t' << i << '\t' << i + 120 << '\t' << 1 << std::endl;
-        tcb_file.close();
+        std::string chromosome = matches[1].str();
+        int start = stoi(matches[2].str());
+        int end = stoi(matches[3].str());
+        std::ofstream tcb_file(tcb_filename);
+        if(tcb_file.is_open())
+        {
+          for(int i = start; i <= end-120; i++)
+            if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
+              tcb_file << chromosome << '\t' << i << '\t' << i + 120 << '\t' << 1 << std::endl;
+          tcb_file.close();
+        }
+        system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
+        ScanProbesPass2_3(tcf_filename, 20, 48, 84, pnpnop2_filename, ipp2_filename, ig_filename, l);
       }
-      system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
-      ScanProbesPass2_3(tcf_filename, 20, 48, 84, pnpnop2_filename, ipp2_filename, ig_filename, l);
     }
 
     gaps_file_in.close();
@@ -426,17 +468,18 @@ int main()
     std::string line;
     while(getline(pnpnop2_file, line))
     {
-      std::regex rgx("(.+) (\\d+) (\\d+) (.+) (\\d+) (\\d+) (\\d+)");
       std::smatch matches;
-      std::regex_search(line, matches, rgx);
-      std::string chromosome = matches[1].str();
-      int start = stoi(matches[2].str());
-      int end = stoi(matches[3].str());
-      std::string sequence = matches[4].str();
-      int length = stoi(matches[5].str());
-      int counter = stoi(matches[6].str());
-      int GC = stoi(matches[7].str());
-      probes2.push_back(std::make_tuple(chromosome, start, end, sequence, length, counter, GC));
+      if(std::regex_search(line, matches, PROBE_NO_OVERLAP_REGEX))
+      {
+        std::string chromosome = matches[1].str();
+        int start = stoi(matches[2].str());
+        int end = stoi(matches[3].str());
+        std::string sequence = matches[4].str();
+        int length = stoi(matches[5].str());
+        int counter = stoi(matches[6].str());
+        int GC = stoi(matches[7].str());
+        probes2.push_back(std::make_tuple(chromosome, start, end, sequence, length, counter, GC));
+      }
     }
 
     pnpnop2_file.close();
@@ -521,22 +564,23 @@ int main()
     while(getline(gapsp2_file_in, line))
     {
       l++;
-      std::regex rgx("(.+) (\\d+) (\\d+)");
       std::smatch matches;
-      std::regex_search(line, matches, rgx);
-      std::string chromosome = matches[1].str();
-      int start = stoi(matches[2].str());
-      int end = stoi(matches[3].str());
-      std::ofstream tcb_file(tcb_filename);
-      if(tcb_file.is_open())
+      if(std::regex_search(line, matches, GAP_PASS_2_REGEX))
       {
-        for(int i = start; i <= end-120; i++)
-          if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
-            tcb_file << chromosome << '\t' << i << '\t' << i + 120 << '\t' << 1 << std::endl;
-        tcb_file.close();
+        std::string chromosome = matches[1].str();
+        int start = stoi(matches[2].str());
+        int end = stoi(matches[3].str());
+        std::ofstream tcb_file(tcb_filename);
+        if(tcb_file.is_open())
+        {
+          for(int i = start; i <= end-120; i++)
+            if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
+              tcb_file << chromosome << '\t' << i << '\t' << i + 120 << '\t' << 1 << std::endl;
+          tcb_file.close();
+        }
+        system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
+        ScanProbesPass2_3(tcf_filename, 25, 30, 96, pnpnop3_filename, ipp3_filename, igp2_filename, l);
       }
-      system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
-      ScanProbesPass2_3(tcf_filename, 25, 30, 96, pnpnop3_filename, ipp3_filename, igp2_filename, l);
     }
 
     gapsp2_file_in.close();
@@ -549,17 +593,18 @@ int main()
     std::string line;
     while(getline(pnpnop3_file, line))
     {
-      std::regex rgx("(.+) (\\d+) (\\d+) (.+) (\\d+) (\\d+) (\\d+)");
       std::smatch matches;
-      std::regex_search(line, matches, rgx);
-      std::string chromosome = matches[1].str();
-      int start = stoi(matches[2].str());
-      int end = stoi(matches[3].str());
-      std::string sequence = matches[4].str();
-      int length = stoi(matches[5].str());
-      int counter = stoi(matches[6].str());
-      int GC = stoi(matches[7].str());
-      probes3.push_back(std::make_tuple(chromosome, start, end, sequence, length, counter, GC));
+      if(std::regex_search(line, matches, PROBE_NO_OVERLAP_REGEX))
+      {
+        std::string chromosome = matches[1].str();
+        int start = stoi(matches[2].str());
+        int end = stoi(matches[3].str());
+        std::string sequence = matches[4].str();
+        int length = stoi(matches[5].str());
+        int counter = stoi(matches[6].str());
+        int GC = stoi(matches[7].str());
+        probes3.push_back(std::make_tuple(chromosome, start, end, sequence, length, counter, GC));
+      }
     }
 
     pnpnop3_file.close();
