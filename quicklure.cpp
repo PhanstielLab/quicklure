@@ -24,7 +24,7 @@ void ScanProbesPass1(std::string candidatesFastaFilename, int repeatThresh, int 
   std::ofstream pl_file(probeListFilename, std::ofstream::app);
   std::ofstream ip_file(issueProbesFilename, std::ofstream::app);
   std::ofstream is_file(issueSitesFilename, std::ofstream::app);
-  if(fasta.is_open() && pl_file.is_open() && ip_file.is_open() && is_file.is_open())
+  if(fasta.good() && pl_file.good() && ip_file.good() && is_file.good())
   {
     std::string line;
     std::string description;
@@ -43,7 +43,7 @@ void ScanProbesPass1(std::string candidatesFastaFilename, int repeatThresh, int 
           if(entries == 1)
           {
             std::ofstream c1_file("condition1.txt", std::ofstream::app);
-            if(c1_file.is_open())
+            if(c1_file.good())
               c1_file << description << ' ' << 0 << ' ' << 0 << ' ' << description << std::endl;
             c1_file.close();
             first_description = description;
@@ -66,7 +66,7 @@ void ScanProbesPass1(std::string candidatesFastaFilename, int repeatThresh, int 
             if(GC>=GCThresh3&&GC<=GCThresh4)
             {
               std::ofstream s("something.txt", std::ofstream::app);
-              if(s.is_open())
+              if(s.good())
                 s << sequence << std::endl;
               s.close();
               pl_file << description << ' ' << sequence << ' ' << sequence.length() << ' ' << counter << ' ' << GC << std::endl;
@@ -129,7 +129,7 @@ void ScanProbesPass2_3(std::string candidatesFastaFilename, int repeatThresh, in
   std::ofstream pl_file(probeListFilename, std::ofstream::app);
   std::ofstream ip_file(issueProbesFilename, std::ofstream::app);
   std::ofstream ig_file(issueGapsFilename, std::ofstream::app);
-  if(fasta.is_open() && pl_file.is_open() && ip_file.is_open() && ig_file.is_open())
+  if(fasta.good() && pl_file.good() && ip_file.good() && ig_file.good())
   {
     std::string line;
     std::string description;
@@ -282,7 +282,7 @@ int main(int argc, char **argv)
 
   std::ifstream re_file(re_filename);
   std::ofstream rs_file_out(rs_filename);
-  if(re_file.is_open() && rs_file_out.is_open())
+  if(re_file.good() && rs_file_out.good())
   {
     std::string line;
     while(getline(re_file, line))
@@ -306,7 +306,7 @@ int main(int argc, char **argv)
   }
 
   std::ifstream rs_file_in(rs_filename);
-  if(rs_file_in.is_open())
+  if(rs_file_in.good())
   {
     std::string line;
     while(getline(rs_file_in, line))
@@ -314,7 +314,7 @@ int main(int argc, char **argv)
       int tab = line.find('\t');
       int res = stoi(line.substr(tab + 1));
       std::ofstream tcb_file(tcb_filename);
-      if(tcb_file.is_open())
+      if(tcb_file.good())
       {
         for(int i = 0; i <= max_length_from_rs; i++)
           tcb_file << chromosome << '\t' << res-i-120 << '\t' << res-i << '\t' << 1 << std::endl;
@@ -323,7 +323,7 @@ int main(int argc, char **argv)
         ScanProbesPass1(tcf_filename, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "upstream");
       }
       tcb_file.open(tcb_filename);
-      if(tcb_file.is_open())
+      if(tcb_file.good())
       {
         for(int i = 0; i <= max_length_from_rs; i++)
           tcb_file << chromosome << '\t' << res+i << '\t' << res+i+120 << '\t' << 1 << std::endl;
@@ -338,7 +338,7 @@ int main(int argc, char **argv)
 
   std::ifstream pnp_file(pnp_filename);
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> probes;
-  if(pnp_file.is_open())
+  if(pnp_file.good())
   {
     std::string line;
     while(getline(pnp_file, line))
@@ -362,7 +362,7 @@ int main(int argc, char **argv)
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it2 = std::unique(probes.begin(), probes.end());
   probes.resize(std::distance(probes.begin(), it2));
   std::ofstream pnps_file(pnps_filename);
-  if(pnps_file.is_open())
+  if(pnps_file.good())
   {
     for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
       pnps_file << std::get<0>(*it) << ' ' << std::get<1>(*it) << ' ' << std::get<2>(*it) << ' ' << std::get<3>(*it) <<
@@ -375,7 +375,7 @@ int main(int argc, char **argv)
   end = -1;
   std::ofstream pnpno_file(pnpno_filename);
   std::ofstream gaps_file_out(gaps_filename, std::ofstream::app);
-  if(pnpno_file.is_open() && gaps_file_out.is_open())
+  if(pnpno_file.good() && gaps_file_out.good())
   {
     for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
     {
@@ -406,7 +406,7 @@ int main(int argc, char **argv)
 
   std::unordered_set<int> closeRS;
   rs_file_in.open(rs_filename);
-  if(rs_file_in.is_open())
+  if(rs_file_in.good())
   {
     std::string line;
     while(getline(rs_file_in, line))
@@ -422,7 +422,7 @@ int main(int argc, char **argv)
 
   std::ifstream gaps_file_in(gaps_filename);
   int l = 0;
-  if(gaps_file_in.is_open())
+  if(gaps_file_in.good())
   {
     std::string line;
     while(getline(gaps_file_in, line))
@@ -435,7 +435,7 @@ int main(int argc, char **argv)
         int start = stoi(matches[2].str());
         int end = stoi(matches[3].str());
         std::ofstream tcb_file(tcb_filename);
-        if(tcb_file.is_open())
+        if(tcb_file.good())
         {
           for(int i = start; i <= end-120; i++)
             if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
@@ -452,7 +452,7 @@ int main(int argc, char **argv)
 
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> probes2;
   std::ifstream pnpnop2_file(pnpnop2_filename);
-  if(pnpnop2_file.is_open())
+  if(pnpnop2_file.good())
   {
     std::string line;
     while(getline(pnpnop2_file, line))
@@ -477,7 +477,7 @@ int main(int argc, char **argv)
   it2 = std::unique(probes2.begin(), probes2.end());
   probes2.resize(std::distance(probes2.begin(), it2));
   std::ofstream pnpnop2s_file(pnpnop2s_filename);
-  if(pnpnop2s_file.is_open())
+  if(pnpnop2s_file.good())
   {
     for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes2.begin(); it != probes2.end(); ++it)
       pnpnop2s_file << std::get<0>(*it) << ' ' << std::get<1>(*it) << ' ' << std::get<2>(*it) << ' ' << std::get<3>(*it) <<
@@ -500,7 +500,7 @@ int main(int argc, char **argv)
   int pos1;
   int pos2;
   std::ofstream gapsp2_file_out(gapsp2_filename);
-  if(gapsp2_file_out.is_open())
+  if(gapsp2_file_out.good())
   {
     for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes2.begin(); it != probes2.end(); ++it)
     {
@@ -530,7 +530,7 @@ int main(int argc, char **argv)
 
   std::ifstream gapsp2_file_in(gapsp2_filename);
   l = 0;
-  if(gapsp2_file_in.is_open())
+  if(gapsp2_file_in.good())
   {
     std::string line;
     while(getline(gapsp2_file_in, line))
@@ -543,7 +543,7 @@ int main(int argc, char **argv)
         int start = stoi(matches[2].str());
         int end = stoi(matches[3].str());
         std::ofstream tcb_file(tcb_filename);
-        if(tcb_file.is_open())
+        if(tcb_file.good())
         {
           for(int i = start; i <= end-120; i++)
             if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
@@ -560,7 +560,7 @@ int main(int argc, char **argv)
 
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> probes3;
   std::ifstream pnpnop3_file(pnpnop3_filename);
-  if(pnpnop3_file.is_open())
+  if(pnpnop3_file.good())
   {
     std::string line;
     while(getline(pnpnop3_file, line))
@@ -585,7 +585,7 @@ int main(int argc, char **argv)
   it2 = std::unique(probes3.begin(), probes3.end());
   probes3.resize(std::distance(probes3.begin(), it2));
   std::ofstream pnpnop3s_file(pnpnop3s_filename);
-  if(pnpnop3s_file.is_open())
+  if(pnpnop3s_file.good())
   {
     for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes3.begin(); it != probes3.end(); ++it)
       pnpnop3s_file << std::get<0>(*it) << ' ' << std::get<1>(*it) << ' ' << std::get<2>(*it) << ' ' << std::get<3>(*it) <<
@@ -594,7 +594,7 @@ int main(int argc, char **argv)
   }
 
   std::ofstream pwpno_file(pwpno_filename);
-  if(pwpno_file.is_open())
+  if(pwpno_file.good())
   {
     for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes3.begin(); it != probes3.end(); ++it)
       pwpno_file << std::get<0>(*it) << '\t' << std::get<1>(*it) << '\t' << std::get<2>(*it) << '\t' <<
