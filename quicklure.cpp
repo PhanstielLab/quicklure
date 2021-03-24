@@ -1,9 +1,7 @@
 #include <algorithm>
 #include <cctype>
-#include <cmath>
 #include <cstdlib>
 #include <fstream>
-#include <iostream>
 #include <iterator>
 #include <map>
 #include <regex>
@@ -122,15 +120,6 @@ bool compareChromThenStart(const std::tuple<std::string, int, int, std::string, 
   const std::tuple<std::string, int, int, std::string, int, int, int> &right)
 {
   return std::tie(std::get<0>(left), std::get<1>(left)) < std::tie(std::get<0>(right), std::get<1>(right));
-}
-
-bool compareProbes(const std::tuple<std::string, int, int, std::string, int, int, int> &left,
-  const std::tuple<std::string, int, int, std::string, int, int, int> &right)
-{
-  return std::get<0>(left) == std::get<0>(right) && std::get<1>(left) == std::get<1>(right) &&
-    std::get<2>(left) == std::get<2>(right) && std::get<3>(left) == std::get<3>(right) &&
-    std::get<4>(left) == std::get<4>(right) && std::get<5>(left) == std::get<5>(right) &&
-    std::get<6>(left) == std::get<6>(right);
 }
 
 void ScanProbesPass2_3(std::string candidatesFastaFilename, int repeatThresh, int GCThresh1, int GCThresh2,
@@ -370,7 +359,7 @@ int main(int argc, char **argv)
     pnp_file.close();
   }
   std::sort(probes.begin(), probes.end(), compareChromThenStart);
-  std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it2 = std::unique(probes.begin(), probes.end(), compareProbes);
+  std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it2 = std::unique(probes.begin(), probes.end());
   probes.resize(std::distance(probes.begin(), it2));
   std::ofstream pnps_file(pnps_filename);
   if(pnps_file.is_open())
@@ -485,7 +474,7 @@ int main(int argc, char **argv)
     pnpnop2_file.close();
   }
   std::sort(probes2.begin(), probes2.end(), compareChromThenStart);
-  it2 = std::unique(probes2.begin(), probes2.end(), compareProbes);
+  it2 = std::unique(probes2.begin(), probes2.end());
   probes2.resize(std::distance(probes2.begin(), it2));
   std::ofstream pnpnop2s_file(pnpnop2s_filename);
   if(pnpnop2s_file.is_open())
@@ -610,7 +599,7 @@ int main(int argc, char **argv)
     pnpnop3_file.close();
   }
   std::sort(probes3.begin(), probes3.end(), compareChromThenStart);
-  it2 = std::unique(probes3.begin(), probes3.end(), compareProbes);
+  it2 = std::unique(probes3.begin(), probes3.end());
   probes3.resize(std::distance(probes3.begin(), it2));
   std::ofstream pnpnop3s_file(pnpnop3s_filename);
   if(pnpnop3s_file.is_open())
