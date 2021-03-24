@@ -217,11 +217,11 @@ void ScanProbesPass2_3(std::string candidatesFastaFilename, int repeatThresh, in
     }
     if(!done)
       ig_file << "No probes found for gap " << lineCounter << std::endl;
-    fasta.close();
-    pl_file.close();
-    ip_file.close();
-    ig_file.close();
   }
+  fasta.close();
+  pl_file.close();
+  ip_file.close();
+  ig_file.close();
 }
 
 int main(int argc, char **argv)
@@ -319,31 +319,27 @@ int main(int argc, char **argv)
         }
       }
     }
-    re_file.close();
-    rs_file.close();
   }
+  re_file.close();
+  rs_file.close();
 
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> probes;
   for(std::vector<int>::iterator it = restriction_sites.begin(); it != restriction_sites.end(); ++it)
   {
     std::ofstream tcb_file(tcb_filename);
     if(tcb_file.good())
-    {
       for(int i = 0; i <= max_length_from_rs; i++)
         tcb_file << chromosome << '\t' << (*it)-i-120 << '\t' << (*it)-i << '\t' << 1 << std::endl;
-      tcb_file.close();
-      system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
-      ScanProbesPass1(tcf_filename, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "upstream", probes);
-    }
+    tcb_file.close();
+    system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
+    ScanProbesPass1(tcf_filename, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "upstream", probes);
     tcb_file.open(tcb_filename);
     if(tcb_file.good())
-    {
       for(int i = 0; i <= max_length_from_rs; i++)
         tcb_file << chromosome << '\t' << (*it)+i << '\t' << (*it)+i+120 << '\t' << 1 << std::endl;
-      tcb_file.close();
-      system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
-      ScanProbesPass1(tcf_filename, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "downstream", probes);
-    }
+    tcb_file.close();
+    system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
+    ScanProbesPass1(tcf_filename, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "downstream", probes);
   }
 
   std::sort(probes.begin(), probes.end(), compareChromThenStart);
@@ -355,8 +351,8 @@ int main(int argc, char **argv)
     for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
       pnps_file << std::get<0>(*it) << ' ' << std::get<1>(*it) << ' ' << std::get<2>(*it) << ' ' << std::get<3>(*it) <<
         ' ' << std::get<4>(*it) << ' ' << std::get<5>(*it) << ' ' << std::get<6>(*it) << std::endl;
-    pnps_file.close();
   }
+  pnps_file.close();
 
   chromosome.clear();
   start = -1;
@@ -393,9 +389,9 @@ int main(int argc, char **argv)
         end = std::get<2>(*it);
       }
     }
-    pnpno_file.close();
-    gaps_file.close();
   }
+  pnpno_file.close();
+  gaps_file.close();
   probes = probes_no_overlap;
 
   system(("cp " + pnpno_filename + ' ' + pnpnop2_filename).c_str());
@@ -414,12 +410,10 @@ int main(int argc, char **argv)
     int end = std::get<2>(*it);
     std::ofstream tcb_file(tcb_filename);
     if(tcb_file.good())
-    {
       for(int i = start; i <= end-120; i++)
         if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
           tcb_file << chromosome << '\t' << i << '\t' << i + 120 << '\t' << 1 << std::endl;
-      tcb_file.close();
-    }
+    tcb_file.close();
     system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
     ScanProbesPass2_3(tcf_filename, 20, 48, 84, pnpnop2_filename, ipp2_filename, ig_filename, l, probes);
   }
@@ -429,12 +423,10 @@ int main(int argc, char **argv)
   probes.erase(last, probes.end());
   std::ofstream pnpnop2s_file(pnpnop2s_filename);
   if(pnpnop2s_file.good())
-  {
     for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
       pnpnop2s_file << std::get<0>(*it) << ' ' << std::get<1>(*it) << ' ' << std::get<2>(*it) << ' ' << std::get<3>(*it) <<
         ' ' << std::get<4>(*it) << ' ' << std::get<5>(*it) << ' ' << std::get<6>(*it) << std::endl;
-    pnpnop2s_file.close();
-  }
+  pnpnop2s_file.close();
 
   std::map<std::string, int> x;
   for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
@@ -477,9 +469,8 @@ int main(int argc, char **argv)
         pos2 = std::get<2>(*it);
       }
     }
-
-    gapsp2_file.close();
   }
+  gapsp2_file.close();
 
   system(("cp " + pnpnop2s_filename + ' ' + pnpnop3_filename).c_str());
 
@@ -492,12 +483,10 @@ int main(int argc, char **argv)
     int end = std::get<2>(*it);
     std::ofstream tcb_file(tcb_filename);
     if(tcb_file.good())
-    {
       for(int i = start; i <= end-120; i++)
         if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
           tcb_file << chromosome << '\t' << i << '\t' << i + 120 << '\t' << 1 << std::endl;
-      tcb_file.close();
-    }
+    tcb_file.close();
     system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
     ScanProbesPass2_3(tcf_filename, 25, 30, 96, pnpnop3_filename, ipp3_filename, igp2_filename, l, probes);
   }
@@ -507,21 +496,17 @@ int main(int argc, char **argv)
   probes.erase(last, probes.end());
   std::ofstream pnpnop3s_file(pnpnop3s_filename);
   if(pnpnop3s_file.good())
-  {
     for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
       pnpnop3s_file << std::get<0>(*it) << ' ' << std::get<1>(*it) << ' ' << std::get<2>(*it) << ' ' << std::get<3>(*it) <<
         ' ' << std::get<4>(*it) << ' ' << std::get<5>(*it) << ' ' << std::get<6>(*it) << std::endl;
-    pnpnop3s_file.close();
-  }
+  pnpnop3s_file.close();
 
   std::ofstream pwpno_file(pwpno_filename);
   if(pwpno_file.good())
-  {
     for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
       pwpno_file << std::get<0>(*it) << '\t' << std::get<1>(*it) << '\t' << std::get<2>(*it) << '\t' <<
         forward_primer + std::get<3>(*it) + reverse_primer << '\t' << std::get<4>(*it) + forward_primer.length() + reverse_primer.length() << std::endl;
-    pwpno_file.close();
-  }
+  pwpno_file.close();
 
   return 0;
 }
