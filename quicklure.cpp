@@ -12,10 +12,6 @@
 #include <vector>
 
 static std::regex FASTA_REGEX(">?(.+):(\\d+)-(\\d+)");
-static std::regex PROBE_REGEX(">(.+):(\\d+)-(\\d+) (.+) (\\d+) (\\d+) (\\d+)");
-static std::regex GAP_REGEX("(.+)\\t(\\d+)\\t(\\d+)\\t(\\d+)");
-static std::regex PROBE_NO_OVERLAP_REGEX("(.+) (\\d+) (\\d+) (.+) (\\d+) (\\d+) (\\d+)");
-static std::regex GAP_PASS_2_REGEX("(.+) (\\d+) (\\d+)");
 
 void ScanProbesPass1(std::string candidatesFastaFilename, int repeatThresh, int GCThresh1, int GCThresh2, int GCThresh3, int GCThresh4,
   std::string probeListFilename, std::string issueProbesFilename, std::string issueSitesFilename, std::string side,
@@ -371,6 +367,7 @@ int main(int argc, char **argv)
   start = -1;
   end = -1;
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> probes_no_overlap;
+  std::vector<std::tuple<std::string, int, int>> gaps;
   std::ofstream pnpno_file(pnpno_filename);
   std::ofstream gaps_file_out(gaps_filename, std::ofstream::app);
   if(pnpno_file.good() && gaps_file_out.good())
@@ -392,7 +389,10 @@ int main(int argc, char **argv)
         pnpno_file << std::get<0>(*it) << ' ' << std::get<1>(*it) << ' ' << std::get<2>(*it) << ' ' << std::get<3>(*it) <<
           ' ' << std::get<4>(*it) << ' ' << std::get<5>(*it) << ' ' << std::get<6>(*it) << std::endl;
         if(std::get<1>(*it) - end + 10 > 120)
+        {
+          gaps.push_back(make_tuple(std::get<0>(*it), end - 5, std::get<1>(*it) + 5));
           gaps_file_out << std::get<0>(*it) << '\t' << end - 5 << '\t' << std::get<1>(*it) + 5 << '\t' << 1 << std::endl;
+        }
         chromosome = std::get<0>(*it);
         start = std::get<1>(*it);
         end = std::get<2>(*it);
@@ -422,33 +422,22 @@ int main(int argc, char **argv)
   }
 
   int l = 0;
-  std::ifstream gaps_file_in(gaps_filename);
-  if(gaps_file_in.good())
+  for(std::vector<std::tuple<std::string, int, int>>::iterator it = gaps.begin(); it != gaps.end(); ++it)
   {
-    std::string line;
-    while(getline(gaps_file_in, line))
+    l++;
+    std::string chromosome = std::get<0>(*it);
+    int start = std::get<1>(*it);
+    int end = std::get<2>(*it);
+    std::ofstream tcb_file(tcb_filename);
+    if(tcb_file.good())
     {
-      l++;
-      std::smatch matches;
-      if(std::regex_search(line, matches, GAP_REGEX))
-      {
-        std::string chromosome = matches[1].str();
-        int start = stoi(matches[2].str());
-        int end = stoi(matches[3].str());
-        std::ofstream tcb_file(tcb_filename);
-        if(tcb_file.good())
-        {
-          for(int i = start; i <= end-120; i++)
-            if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
-              tcb_file << chromosome << '\t' << i << '\t' << i + 120 << '\t' << 1 << std::endl;
-          tcb_file.close();
-        }
-        system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
-        ScanProbesPass2_3(tcf_filename, 20, 48, 84, pnpnop2_filename, ipp2_filename, ig_filename, l, probes);
-      }
+      for(int i = start; i <= end-120; i++)
+        if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
+          tcb_file << chromosome << '\t' << i << '\t' << i + 120 << '\t' << 1 << std::endl;
+      tcb_file.close();
     }
-
-    gaps_file_in.close();
+    system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
+    ScanProbesPass2_3(tcf_filename, 20, 48, 84, pnpnop2_filename, ipp2_filename, ig_filename, l, probes);
   }
 
   std::sort(probes.begin(), probes.end(), compareChromThenStart);
@@ -477,6 +466,7 @@ int main(int argc, char **argv)
   chromosome.clear();
   int pos1;
   int pos2;
+  gaps.clear();
   std::ofstream gapsp2_file_out(gapsp2_filename);
   if(gapsp2_file_out.good())
   {
@@ -494,7 +484,10 @@ int main(int argc, char **argv)
         if (std::get<0>(*it)==chromosome && start-pos2+10>120 &&
           (x[chromosome + ' ' + std::to_string((int)(pos2/5000))]<5 ||
             x[chromosome + ' ' + std::to_string((int)(start/5000))]<5))
+        {
+          gaps.push_back(make_tuple(chromosome, pos2, start));
           gapsp2_file_out << chromosome << ' ' << pos2 << ' ' << start << std::endl;
+        }
         chromosome = std::get<0>(*it);
         pos1 = std::get<1>(*it);
         pos2 = std::get<2>(*it);
@@ -507,33 +500,22 @@ int main(int argc, char **argv)
   system(("cp " + pnpnop2s_filename + ' ' + pnpnop3_filename).c_str());
 
   l = 0;
-  std::ifstream gapsp2_file_in(gapsp2_filename);
-  if(gapsp2_file_in.good())
+  for(std::vector<std::tuple<std::string, int, int>>::iterator it = gaps.begin(); it != gaps.end(); ++it)
   {
-    std::string line;
-    while(getline(gapsp2_file_in, line))
+    l++;
+    std::string chromosome = std::get<0>(*it);
+    int start = std::get<1>(*it);
+    int end = std::get<2>(*it);
+    std::ofstream tcb_file(tcb_filename);
+    if(tcb_file.good())
     {
-      l++;
-      std::smatch matches;
-      if(std::regex_search(line, matches, GAP_PASS_2_REGEX))
-      {
-        std::string chromosome = matches[1].str();
-        int start = stoi(matches[2].str());
-        int end = stoi(matches[3].str());
-        std::ofstream tcb_file(tcb_filename);
-        if(tcb_file.good())
-        {
-          for(int i = start; i <= end-120; i++)
-            if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
-              tcb_file << chromosome << '\t' << i << '\t' << i + 120 << '\t' << 1 << std::endl;
-          tcb_file.close();
-        }
-        system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
-        ScanProbesPass2_3(tcf_filename, 25, 30, 96, pnpnop3_filename, ipp3_filename, igp2_filename, l, probes);
-      }
+      for(int i = start; i <= end-120; i++)
+        if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
+          tcb_file << chromosome << '\t' << i << '\t' << i + 120 << '\t' << 1 << std::endl;
+      tcb_file.close();
     }
-
-    gapsp2_file_in.close();
+    system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
+    ScanProbesPass2_3(tcf_filename, 25, 30, 96, pnpnop3_filename, ipp3_filename, igp2_filename, l, probes);
   }
 
   std::sort(probes.begin(), probes.end(), compareChromThenStart);
