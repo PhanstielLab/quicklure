@@ -294,9 +294,10 @@ int main(int argc, char **argv)
     end = stoi(matches[3].str());
   }
 
+  std::vector<int> restriction_sites;
   std::ifstream re_file(re_filename);
-  std::ofstream rs_file_out(rs_filename);
-  if(re_file.good() && rs_file_out.good())
+  std::ofstream rs_file(rs_filename);
+  if(re_file.good() && rs_file.good())
   {
     std::string line;
     while(getline(re_file, line))
@@ -307,48 +308,42 @@ int main(int argc, char **argv)
         std::string field;
         while(iss >> field)
         {
-          int residue = stoi(field);
-          if(residue >= start && residue <= end)
-            rs_file_out << chromosome_number << '\t' << residue << std::endl;
-          if(residue > end)
+          int restriction_site = stoi(field);
+          if(restriction_site >= start && restriction_site <= end)
+          {
+            restriction_sites.push_back(restriction_site);
+            rs_file << chromosome_number << '\t' << restriction_site << std::endl;
+          }
+          if(restriction_site > end)
             break;
         }
       }
     }
     re_file.close();
-    rs_file_out.close();
+    rs_file.close();
   }
 
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> probes;
-  std::ifstream rs_file_in(rs_filename);
-  if(rs_file_in.good())
+  for(std::vector<int>::iterator it = restriction_sites.begin(); it != restriction_sites.end(); ++it)
   {
-    std::string line;
-    while(getline(rs_file_in, line))
+    std::ofstream tcb_file(tcb_filename);
+    if(tcb_file.good())
     {
-      int tab = line.find('\t');
-      int res = stoi(line.substr(tab + 1));
-      std::ofstream tcb_file(tcb_filename);
-      if(tcb_file.good())
-      {
-        for(int i = 0; i <= max_length_from_rs; i++)
-          tcb_file << chromosome << '\t' << res-i-120 << '\t' << res-i << '\t' << 1 << std::endl;
-        tcb_file.close();
-        system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
-        ScanProbesPass1(tcf_filename, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "upstream", probes);
-      }
-      tcb_file.open(tcb_filename);
-      if(tcb_file.good())
-      {
-        for(int i = 0; i <= max_length_from_rs; i++)
-          tcb_file << chromosome << '\t' << res+i << '\t' << res+i+120 << '\t' << 1 << std::endl;
-        tcb_file.close();
-        system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
-        ScanProbesPass1(tcf_filename, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "downstream", probes);
-      }
+      for(int i = 0; i <= max_length_from_rs; i++)
+        tcb_file << chromosome << '\t' << (*it)-i-120 << '\t' << (*it)-i << '\t' << 1 << std::endl;
+      tcb_file.close();
+      system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
+      ScanProbesPass1(tcf_filename, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "upstream", probes);
     }
-
-    rs_file_in.close();
+    tcb_file.open(tcb_filename);
+    if(tcb_file.good())
+    {
+      for(int i = 0; i <= max_length_from_rs; i++)
+        tcb_file << chromosome << '\t' << (*it)+i << '\t' << (*it)+i+120 << '\t' << 1 << std::endl;
+      tcb_file.close();
+      system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
+      ScanProbesPass1(tcf_filename, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "downstream", probes);
+    }
   }
 
   std::sort(probes.begin(), probes.end(), compareChromThenStart);
@@ -406,20 +401,9 @@ int main(int argc, char **argv)
   system(("cp " + pnpno_filename + ' ' + pnpnop2_filename).c_str());
 
   std::unordered_set<int> closeRS;
-  rs_file_in.open(rs_filename);
-  if(rs_file_in.good())
-  {
-    std::string line;
-    while(getline(rs_file_in, line))
-    {
-      int tab = line.find('\t');
-      int res = stoi(line.substr(tab + 1));
+  for(std::vector<int>::iterator it = restriction_sites.begin(); it != restriction_sites.end(); ++it)
       for (int i = -max_length_from_rs2; i<=max_length_from_rs2; i++)
-        closeRS.insert(res + i);
-    }
-
-    rs_file_in.close();
-  }
+        closeRS.insert((*it) + i);
 
   int l = 0;
   for(std::vector<std::tuple<std::string, int, int>>::iterator it = gaps.begin(); it != gaps.end(); ++it)
