@@ -11,7 +11,7 @@
 #include <unordered_set>
 #include <vector>
 
-const std::regex FASTA_REGEX(">?(.+):(\\d+)-(\\d+)");
+const std::regex FASTA_REGEX(">?(chr(.+)):(\\d+)-(\\d+)");
 
 void ScanProbesPass1(std::string candidatesFastaFilename, int repeatThresh, int GCThresh1, int GCThresh2, int GCThresh3, int GCThresh4,
   std::string probeListFilename, std::string issueProbesFilename, std::string issueSitesFilename, std::string side,
@@ -67,8 +67,8 @@ void ScanProbesPass1(std::string candidatesFastaFilename, int repeatThresh, int 
             if(std::regex_search(description, matches, FASTA_REGEX))
             {
               chromosome = matches[1].str();
-              start = stoi(matches[2].str());
-              end = stoi(matches[3].str());
+              start = stoi(matches[3].str());
+              end = stoi(matches[4].str());
             }
             if(GC>=GCThresh3&&GC<=GCThresh4)
             {
@@ -115,8 +115,8 @@ void ScanProbesPass1(std::string candidatesFastaFilename, int repeatThresh, int 
         if(std::regex_search(first_description, matches, FASTA_REGEX))
         {
           std::string chromosome = matches[1].str();
-          int start = stoi(matches[2].str());
-          int end = stoi(matches[3].str());
+          int start = stoi(matches[3].str());
+          int end = stoi(matches[4].str());
           is_file << "No " << side << " probes found for:" << chromosome << ' ' << (side == "upstream" ? end : start) << std::endl;
         }
       }
@@ -187,8 +187,8 @@ void ScanProbesPass2_3(std::string candidatesFastaFilename, int repeatThresh, in
             if(std::regex_search(description, matches, FASTA_REGEX))
             {
               chromosome = matches[1].str();
-              pos1 = stoi(matches[2].str());
-              pos2 = stoi(matches[3].str());
+              pos1 = stoi(matches[3].str());
+              pos2 = stoi(matches[4].str());
             }
           }
         }
@@ -207,8 +207,8 @@ void ScanProbesPass2_3(std::string candidatesFastaFilename, int repeatThresh, in
           if(std::regex_search(description, matches, FASTA_REGEX))
           {
             chromosome = matches[1].str();
-            pos1 = stoi(matches[2].str());
-            pos2 = stoi(matches[3].str());
+            pos1 = stoi(matches[3].str());
+            pos2 = stoi(matches[4].str());
           }
         }
       }
@@ -229,9 +229,8 @@ int main(int argc, char **argv)
   int c;
   std::string genome = "hg19";
   std::string location = "chr8:133000000-133100000";
-  std::string bed;
   std::string output_directory = "./output";
-  while ((c = getopt (argc, argv, "g:l:b:o:")) != -1)
+  while ((c = getopt (argc, argv, "g:l:o:")) != -1)
   {
     switch (c)
     {
@@ -240,9 +239,6 @@ int main(int argc, char **argv)
         break;
       case 'l':
         location = optarg;
-        break;
-      case 'b':
-        bed = optarg;
         break;
       case 'o':
         output_directory = optarg;
@@ -281,17 +277,17 @@ int main(int argc, char **argv)
   const std::string forward_primer = "ATCGCACCAGCGTGT";
   const std::string reverse_primer = "CACTGCGGCTCCTCA";
 
-  std::smatch matches;
   std::string chromosome;
   std::string chromosome_number;
   int start;
   int end;
+  std::smatch matches;
   if(std::regex_search(location, matches, FASTA_REGEX))
   {
     chromosome = matches[1].str();
-    chromosome_number = chromosome.substr(3);
-    start = stoi(matches[2].str());
-    end = stoi(matches[3].str());
+    chromosome_number = matches[2].str();
+    start = stoi(matches[3].str());
+    end = stoi(matches[4].str());
   }
 
   std::vector<int> restriction_sites;
