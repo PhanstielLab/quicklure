@@ -528,23 +528,6 @@ int main(int argc, char **argv)
 
   system(("cp " + pnpnop2s_filename + ' ' + pnpnop3_filename).c_str());
 
-  // can't we just use closeRS from earlier?
-  closeRS.clear();
-  rs_file_in.open(rs_filename);
-  if(rs_file_in.is_open())
-  {
-    std::string line;
-    while(getline(rs_file_in, line))
-    {
-      int tab = line.find('\t');
-      int res = stoi(line.substr(tab + 1));
-      for (int i = -max_length_from_rs2; i<=max_length_from_rs2; i++)
-        closeRS.insert(res + i);
-    }
-
-    rs_file_in.close();
-  }
-
   std::ifstream gapsp2_file_in(gapsp2_filename);
   l = 0;
   if(gapsp2_file_in.is_open())
