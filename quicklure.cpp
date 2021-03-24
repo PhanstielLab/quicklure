@@ -11,7 +11,7 @@
 #include <unordered_set>
 #include <vector>
 
-static std::regex FASTA_REGEX(">?(.+):(\\d+)-(\\d+)");
+const std::regex FASTA_REGEX(">?(.+):(\\d+)-(\\d+)");
 
 void ScanProbesPass1(std::string candidatesFastaFilename, int repeatThresh, int GCThresh1, int GCThresh2, int GCThresh3, int GCThresh4,
   std::string probeListFilename, std::string issueProbesFilename, std::string issueSitesFilename, std::string side,
@@ -364,8 +364,8 @@ int main(int argc, char **argv)
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> probes_no_overlap;
   std::vector<std::tuple<std::string, int, int>> gaps;
   std::ofstream pnpno_file(pnpno_filename);
-  std::ofstream gaps_file_out(gaps_filename, std::ofstream::app);
-  if(pnpno_file.good() && gaps_file_out.good())
+  std::ofstream gaps_file(gaps_filename, std::ofstream::app);
+  if(pnpno_file.good() && gaps_file.good())
   {
     for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
     {
@@ -386,7 +386,7 @@ int main(int argc, char **argv)
         if(std::get<1>(*it) - end + 10 > 120)
         {
           gaps.push_back(make_tuple(std::get<0>(*it), end - 5, std::get<1>(*it) + 5));
-          gaps_file_out << std::get<0>(*it) << '\t' << end - 5 << '\t' << std::get<1>(*it) + 5 << '\t' << 1 << std::endl;
+          gaps_file << std::get<0>(*it) << '\t' << end - 5 << '\t' << std::get<1>(*it) + 5 << '\t' << 1 << std::endl;
         }
         chromosome = std::get<0>(*it);
         start = std::get<1>(*it);
@@ -394,7 +394,7 @@ int main(int argc, char **argv)
       }
     }
     pnpno_file.close();
-    gaps_file_out.close();
+    gaps_file.close();
   }
   probes = probes_no_overlap;
 
@@ -451,8 +451,8 @@ int main(int argc, char **argv)
   int pos1;
   int pos2;
   gaps.clear();
-  std::ofstream gapsp2_file_out(gapsp2_filename);
-  if(gapsp2_file_out.good())
+  std::ofstream gapsp2_file(gapsp2_filename);
+  if(gapsp2_file.good())
   {
     for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
     {
@@ -470,7 +470,7 @@ int main(int argc, char **argv)
             x[chromosome + ' ' + std::to_string((int)(start/5000))]<5))
         {
           gaps.push_back(make_tuple(chromosome, pos2, start));
-          gapsp2_file_out << chromosome << ' ' << pos2 << ' ' << start << std::endl;
+          gapsp2_file << chromosome << ' ' << pos2 << ' ' << start << std::endl;
         }
         chromosome = std::get<0>(*it);
         pos1 = std::get<1>(*it);
@@ -478,7 +478,7 @@ int main(int argc, char **argv)
       }
     }
 
-    gapsp2_file_out.close();
+    gapsp2_file.close();
   }
 
   system(("cp " + pnpnop2s_filename + ' ' + pnpnop3_filename).c_str());
