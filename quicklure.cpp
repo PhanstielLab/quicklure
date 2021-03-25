@@ -31,13 +31,7 @@ void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandida
     {
       std::string description = '>' + std::get<0>(*it) + ':' + std::to_string(std::get<1>(*it)) + '-' + std::to_string(std::get<2>(*it));
       if(it == probeCandidates.begin())
-      {
-        std::ofstream c1_file("condition1.txt", std::ofstream::app);
-        if(c1_file.good())
-          c1_file << description << ' ' << 0 << ' ' << 0 << ' ' << description << std::endl;
-        c1_file.close();
         first_description = description;
-      }
       int start = std::get<1>(*it);
       int end = std::get<2>(*it);
       std::string sequence = roiSequence.substr(start - roiSequenceStart, end - start);
@@ -68,10 +62,6 @@ void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandida
         }
         if(GC>=GCThresh3&&GC<=GCThresh4)
         {
-          std::ofstream s("something.txt", std::ofstream::app);
-          if(s.good())
-            s << sequence << std::endl;
-          s.close();
           probes.push_back(std::make_tuple(chromosome, start, end, sequence, sequence.length(), counter, GC));
           pl_file << description << ' ' << sequence << ' ' << sequence.length() << ' ' << counter << ' ' << GC << std::endl;
           done = true;
