@@ -6,6 +6,7 @@
 #include <map>
 #include <regex>
 #include <sstream>
+#include <string>
 #include <tuple>
 #include <unistd.h>
 #include <unordered_set>
@@ -377,7 +378,7 @@ int main(int argc, char **argv)
           ' ' << std::get<4>(*it) << ' ' << std::get<5>(*it) << ' ' << std::get<6>(*it) << std::endl;
         if(std::get<1>(*it) - end + 10 > 120)
         {
-          gaps.push_back(make_tuple(std::get<0>(*it), end - 5, std::get<1>(*it) + 5));
+          gaps.push_back(std::make_tuple(std::get<0>(*it), end - 5, std::get<1>(*it) + 5));
           gaps_file << std::get<0>(*it) << '\t' << end - 5 << '\t' << std::get<1>(*it) + 5 << '\t' << 1 << std::endl;
         }
         chromosome = std::get<0>(*it);
@@ -457,7 +458,7 @@ int main(int argc, char **argv)
           (x[chromosome + ' ' + std::to_string((int)(pos2/5000))]<5 ||
             x[chromosome + ' ' + std::to_string((int)(start/5000))]<5))
         {
-          gaps.push_back(make_tuple(chromosome, pos2, start));
+          gaps.push_back(std::make_tuple(chromosome, pos2, start));
           gapsp2_file << chromosome << ' ' << pos2 << ' ' << start << std::endl;
         }
         chromosome = std::get<0>(*it);
