@@ -24,16 +24,14 @@ void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandida
   std::ofstream is_file(issueSitesFilename, std::ofstream::app);
   if(pl_file.good() && ip_file.good() && is_file.good())
   {
-    std::string first_description;
     std::tuple<std::string, int, int, std::string, int, int, int> backup_probe;
     bool done = false;
     for(std::vector<std::tuple<std::string, int, int>>::iterator it = probeCandidates.begin(); it != probeCandidates.end(); ++it)
     {
-      std::string description = '>' + std::get<0>(*it) + ':' + std::to_string(std::get<1>(*it)) + '-' + std::to_string(std::get<2>(*it));
-      if(it == probeCandidates.begin())
-        first_description = description;
+      std::string chromosome = std::get<0>(*it);
       int start = std::get<1>(*it);
       int end = std::get<2>(*it);
+      std::string description = '>' + chromosome + ':' + std::to_string(start) + '-' + std::to_string(end);
       std::string sequence = roiSequence.substr(start - roiSequenceStart, end - start);
       int counter = 0;
       int C = 0;
@@ -50,16 +48,6 @@ void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandida
       int GC = G + C;
       if(counter<=repeatThresh&&GC>=GCThresh1&&GC<=GCThresh2)
       {
-        std::string chromosome;
-        int start;
-        int end;
-        std::smatch matches;
-        if(std::regex_search(description, matches, FASTA_REGEX))
-        {
-          chromosome = matches[1].str();
-          start = stoi(matches[3].str());
-          end = stoi(matches[4].str());
-        }
         if(GC>=GCThresh3&&GC<=GCThresh4)
         {
           probes.push_back(std::make_tuple(chromosome, start, end, sequence, sequence.length(), counter, GC));
@@ -83,14 +71,11 @@ void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandida
       }
       else
       {
-        std::smatch matches;
-        if(std::regex_search(first_description, matches, FASTA_REGEX))
-        {
-          std::string chromosome = matches[1].str();
-          int start = stoi(matches[3].str());
-          int end = stoi(matches[4].str());
-          is_file << "No " << side << " probes found for:" << chromosome << ' ' << (side == "upstream" ? end : start) << std::endl;
-        }
+        std::vector<std::tuple<std::string, int, int>>::iterator first = probeCandidates.begin();
+        std::string chromosome = std::get<0>(*first);
+        int start = std::get<1>(*first);
+        int end = std::get<2>(*first);
+        is_file << "No " << side << " probes found for:" << chromosome << ' ' << (side == "upstream" ? end : start) << std::endl;
       }
     }
     pl_file.close();
