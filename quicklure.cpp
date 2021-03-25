@@ -14,7 +14,7 @@
 
 const std::regex FASTA_REGEX(">?(chr(.+)):(\\d+)-(\\d+)");
 
-void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> bedCandidates, std::string roiSequence, int roiSequenceStart,
+void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandidates, std::string roiSequence, int roiSequenceStart,
   int repeatThresh, int GCThresh1, int GCThresh2, int GCThresh3, int GCThresh4,
   std::string probeListFilename, std::string issueProbesFilename, std::string issueSitesFilename, std::string side,
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> &probes)
@@ -27,10 +27,10 @@ void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> bedCandidate
     std::string first_description;
     std::tuple<std::string, int, int, std::string, int, int, int> backup_probe;
     bool done = false;
-    for(std::vector<std::tuple<std::string, int, int>>::iterator it = bedCandidates.begin(); it != bedCandidates.end(); ++it)
+    for(std::vector<std::tuple<std::string, int, int>>::iterator it = probeCandidates.begin(); it != probeCandidates.end(); ++it)
     {
       std::string description = '>' + std::get<0>(*it) + ':' + std::to_string(std::get<1>(*it)) + '-' + std::to_string(std::get<2>(*it));
-      if(it == bedCandidates.begin())
+      if(it == probeCandidates.begin())
       {
         std::ofstream c1_file("condition1.txt", std::ofstream::app);
         if(c1_file.good())
@@ -115,7 +115,7 @@ bool compareChromThenStart(const std::tuple<std::string, int, int, std::string, 
   return std::tie(std::get<0>(left), std::get<1>(left)) < std::tie(std::get<0>(right), std::get<1>(right));
 }
 
-void ScanProbesPass2_3(std::vector<std::tuple<std::string, int, int>> bedCandidates, std::string roiSequence, int roiSequenceStart,
+void ScanProbesPass2_3(std::vector<std::tuple<std::string, int, int>> probeCandidates, std::string roiSequence, int roiSequenceStart,
   int repeatThresh, int GCThresh1, int GCThresh2,
   std::string probeListFilename, std::string issueProbesFilename, std::string issueGapsFilename, int lineCounter,
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> &probes)
@@ -127,7 +127,7 @@ void ScanProbesPass2_3(std::vector<std::tuple<std::string, int, int>> bedCandida
   {
     bool done = false;
     int end = 0;
-    for(std::vector<std::tuple<std::string, int, int>>::iterator it = bedCandidates.begin(); it != bedCandidates.end(); ++it)
+    for(std::vector<std::tuple<std::string, int, int>>::iterator it = probeCandidates.begin(); it != probeCandidates.end(); ++it)
     {
       std::string chromosome = std::get<0>(*it);
       int pos1 = std::get<1>(*it);
@@ -281,28 +281,28 @@ int main(int argc, char **argv)
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> probes;
   for(std::vector<int>::iterator it = restriction_sites.begin(); it != restriction_sites.end(); ++it)
   {
-    std::vector<std::tuple<std::string, int, int>> bed_candidates;
+    std::vector<std::tuple<std::string, int, int>> probe_candidates;
     std::ofstream tcb_file(tcb_filename);
     if(tcb_file.good())
       for(int i = 0; i <= max_length_from_rs; i++)
       {
-        bed_candidates.push_back(std::make_tuple(chromosome, (*it)-i-120, (*it)-i));
+        probe_candidates.push_back(std::make_tuple(chromosome, (*it)-i-120, (*it)-i));
         tcb_file << chromosome << '\t' << (*it)-i-120 << '\t' << (*it)-i << '\t' << 1 << std::endl;
       }
     tcb_file.close();
     //system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
-    ScanProbesPass1(bed_candidates, roi_sequence, roi_start, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "upstream", probes);
-    bed_candidates.clear();
+    ScanProbesPass1(probe_candidates, roi_sequence, roi_start, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "upstream", probes);
+    probe_candidates.clear();
     tcb_file.open(tcb_filename);
     if(tcb_file.good())
       for(int i = 0; i <= max_length_from_rs; i++)
       {
-        bed_candidates.push_back(std::make_tuple(chromosome, (*it)+i, (*it)+i+120));
+        probe_candidates.push_back(std::make_tuple(chromosome, (*it)+i, (*it)+i+120));
         tcb_file << chromosome << '\t' << (*it)+i << '\t' << (*it)+i+120 << '\t' << 1 << std::endl;
       }
     tcb_file.close();
     //system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
-    ScanProbesPass1(bed_candidates, roi_sequence, roi_start, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "downstream", probes);
+    ScanProbesPass1(probe_candidates, roi_sequence, roi_start, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "downstream", probes);
   }
 
   std::sort(probes.begin(), probes.end(), compareChromThenStart);
@@ -361,8 +361,8 @@ int main(int argc, char **argv)
 
   std::unordered_set<int> closeRS;
   for(std::vector<int>::iterator it = restriction_sites.begin(); it != restriction_sites.end(); ++it)
-      for (int i = -max_length_from_rs2; i<=max_length_from_rs2; i++)
-        closeRS.insert((*it) + i);
+    for (int i = -max_length_from_rs2; i<=max_length_from_rs2; i++)
+      closeRS.insert((*it) + i);
 
   int l = 0;
   for(std::vector<std::tuple<std::string, int, int>>::iterator it = gaps.begin(); it != gaps.end(); ++it)
@@ -371,18 +371,18 @@ int main(int argc, char **argv)
     std::string chromosome = std::get<0>(*it);
     int start = std::get<1>(*it);
     int end = std::get<2>(*it);
-    std::vector<std::tuple<std::string, int, int>> bed_candidates;
+    std::vector<std::tuple<std::string, int, int>> probe_candidates;
     std::ofstream tcb_file(tcb_filename);
     if(tcb_file.good())
       for(int i = start; i <= end-120; i++)
         if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
         {
-          bed_candidates.push_back(std::make_tuple(chromosome, i, i + 120));
+          probe_candidates.push_back(std::make_tuple(chromosome, i, i + 120));
           tcb_file << chromosome << '\t' << i << '\t' << i + 120 << '\t' << 1 << std::endl;
         }
     tcb_file.close();
     //system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
-    ScanProbesPass2_3(bed_candidates, roi_sequence, roi_start, 20, 48, 84, pnpnop2_filename, ipp2_filename, ig_filename, l, probes);
+    ScanProbesPass2_3(probe_candidates, roi_sequence, roi_start, 20, 48, 84, pnpnop2_filename, ipp2_filename, ig_filename, l, probes);
   }
 
   std::sort(probes.begin(), probes.end(), compareChromThenStart);
@@ -448,18 +448,18 @@ int main(int argc, char **argv)
     std::string chromosome = std::get<0>(*it);
     int start = std::get<1>(*it);
     int end = std::get<2>(*it);
-    std::vector<std::tuple<std::string, int, int>> bed_candidates;
+    std::vector<std::tuple<std::string, int, int>> probe_candidates;
     std::ofstream tcb_file(tcb_filename);
     if(tcb_file.good())
       for(int i = start; i <= end-120; i++)
         if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
         {
-          bed_candidates.push_back(std::make_tuple(chromosome, i, i + 120));
+          probe_candidates.push_back(std::make_tuple(chromosome, i, i + 120));
           tcb_file << chromosome << '\t' << i << '\t' << i + 120 << '\t' << 1 << std::endl;
         }
     tcb_file.close();
     //system((tb_bin_filename + ' ' + tb_filename + ' ' + tcf_filename + " -bed=" + tcb_filename + " -bedPos").c_str());
-    ScanProbesPass2_3(bed_candidates, roi_sequence, roi_start, 25, 30, 96, pnpnop3_filename, ipp3_filename, igp2_filename, l, probes);
+    ScanProbesPass2_3(probe_candidates, roi_sequence, roi_start, 25, 30, 96, pnpnop3_filename, ipp3_filename, igp2_filename, l, probes);
   }
 
   std::sort(probes.begin(), probes.end(), compareChromThenStart);
