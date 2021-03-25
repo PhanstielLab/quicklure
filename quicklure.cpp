@@ -115,13 +115,21 @@ void ScanProbesPass2_3(std::vector<std::tuple<std::string, int, int>> probeCandi
   std::ofstream ig_file(issueGapsFilename, std::ofstream::app);
   if(pl_file.good() && ip_file.good() && ig_file.good())
   {
+    std::string chromosome;
+    int pos1;
+    int pos2;
     bool done = false;
     int end = 0;
+    bool update = true;
     for(std::vector<std::tuple<std::string, int, int>>::iterator it = probeCandidates.begin(); it != probeCandidates.end(); ++it)
     {
-      std::string chromosome = std::get<0>(*it);
-      int pos1 = std::get<1>(*it);
-      int pos2 = std::get<2>(*it);
+      if(update)
+      {
+        chromosome = std::get<0>(*it);
+        pos1 = std::get<1>(*it);
+        pos2 = std::get<2>(*it);
+        update = false;
+      }
       if(pos1 > end)
       {
         std::string sequence = roiSequence.substr(pos1 - roiSequenceStart, pos2 - pos1);
@@ -147,6 +155,7 @@ void ScanProbesPass2_3(std::vector<std::tuple<std::string, int, int>> probeCandi
         }
         else
           ip_file << '>' << chromosome << ':' << pos1 << '-' << pos2 << ' ' << counter << ' ' << GC << std::endl;
+        update = true;
       }
     }
     if(!done)
