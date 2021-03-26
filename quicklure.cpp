@@ -93,12 +93,6 @@ void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandida
   }
 }
 
-bool compareChromThenStart(const std::tuple<std::string, int, int, std::string, int, int, int> &left,
-  const std::tuple<std::string, int, int, std::string, int, int, int> &right)
-{
-  return std::tie(std::get<0>(left), std::get<1>(left)) < std::tie(std::get<0>(right), std::get<1>(right));
-}
-
 void ScanProbesPass2_3(std::vector<std::tuple<std::string, int, int>> probeCandidates, std::string roiSequence, int roiSequenceStart,
   int maximumRepeats, int minimumGC, int maximumGC,
   std::string probeListFilename, std::string issueProbesFilename, std::string issueGapsFilename, int gapNumber,
@@ -286,7 +280,7 @@ int main(int argc, char **argv)
       pnp_filename, ip_filename, is_filename, "downstream", probes);
   }
 
-  std::sort(probes.begin(), probes.end(), compareChromThenStart);
+  std::sort(probes.begin(), probes.end());
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator last = std::unique(probes.begin(), probes.end());
   probes.erase(last, probes.end());
   std::ofstream pnps_file(pnps_filename);
@@ -358,7 +352,7 @@ int main(int argc, char **argv)
       pnpnop2_filename, ipp2_filename, ig_filename, l, probes);
   }
 
-  std::sort(probes.begin(), probes.end(), compareChromThenStart);
+  std::sort(probes.begin(), probes.end());
   last = std::unique(probes.begin(), probes.end());
   probes.erase(last, probes.end());
   std::ofstream pnpnop2s_file(pnpnop2s_filename);
@@ -425,7 +419,7 @@ int main(int argc, char **argv)
       pnpnop3_filename, ipp3_filename, igp2_filename, l, probes);
   }
 
-  std::sort(probes.begin(), probes.end(), compareChromThenStart);
+  std::sort(probes.begin(), probes.end());
   last = std::unique(probes.begin(), probes.end());
   probes.erase(last, probes.end());
   std::ofstream pnpnop3s_file(pnpnop3s_filename);
