@@ -14,8 +14,25 @@
 
 const std::regex FASTA_REGEX(">?(chr(.+)):(\\d+)-(\\d+)");
 
+void countRepeatsAndGC(const std::string sequence, int &repeats, int &GC)
+{
+  repeats = 0;
+  int C = 0;
+  int G = 0;
+  for(int i = 0; i < sequence.length(); i++)
+  {
+    if(islower(sequence[i]))
+      repeats++;
+    if(sequence[i] == 'C')
+      C++;
+    if(sequence[i] == 'G')
+      G++;
+  }
+  GC = G + C;
+}
+
 void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandidates, std::string roiSequence, int roiSequenceStart,
-  int repeatThresh, int GCThresh1, int GCThresh2, int GCThresh3, int GCThresh4,
+  int maximumRepeats, int relaxedMinimumGC, int relaxedMaximumGC, int stringentMinimumGC, int stringentMaximumGC,
   std::string probeListFilename, std::string issueProbesFilename, std::string issueSitesFilename, std::string side,
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> &probes)
 {
@@ -33,33 +50,23 @@ void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandida
       int end = std::get<2>(*it);
       std::string description = '>' + chromosome + ':' + std::to_string(start) + '-' + std::to_string(end);
       std::string sequence = roiSequence.substr(start - roiSequenceStart, end - start);
-      int counter = 0;
-      int C = 0;
-      int G = 0;
-      for(int i = 0; i < sequence.length(); i++)
+      int repeats;
+      int GC;
+      countRepeatsAndGC(sequence, repeats, GC);
+      if(repeats <= maximumRepeats && GC >= relaxedMinimumGC && GC <= relaxedMaximumGC)
       {
-        if(islower(sequence[i]))
-          counter++;
-        if(sequence[i] == 'C')
-          C++;
-        if(sequence[i] == 'G')
-          G++;
-      }
-      int GC = G + C;
-      if(counter<=repeatThresh&&GC>=GCThresh1&&GC<=GCThresh2)
-      {
-        if(GC>=GCThresh3&&GC<=GCThresh4)
+        if(GC >= stringentMinimumGC && GC <= stringentMaximumGC)
         {
-          probes.push_back(std::make_tuple(chromosome, start, end, sequence, sequence.length(), counter, GC));
-          pl_file << description << ' ' << sequence << ' ' << sequence.length() << ' ' << counter << ' ' << GC << std::endl;
+          probes.push_back(std::make_tuple(chromosome, start, end, sequence, sequence.length(), repeats, GC));
+          pl_file << description << ' ' << sequence << ' ' << sequence.length() << ' ' << repeats << ' ' << GC << std::endl;
           done = true;
           break;
         }
         else if(std::get<0>(backup_probe).empty())
-          backup_probe = std::make_tuple(chromosome, start, end, sequence, sequence.length(), counter, GC);
+          backup_probe = std::make_tuple(chromosome, start, end, sequence, sequence.length(), repeats, GC);
       }
       else
-        ip_file << description << ' ' << counter << ' ' << GC << ' ' << sequence << std::endl;
+        ip_file << description << ' ' << repeats << ' ' << GC << ' ' << sequence << std::endl;
     }
     if(!done)
     {
@@ -91,8 +98,8 @@ bool compareChromThenStart(const std::tuple<std::string, int, int, std::string, 
 }
 
 void ScanProbesPass2_3(std::vector<std::tuple<std::string, int, int>> probeCandidates, std::string roiSequence, int roiSequenceStart,
-  int repeatThresh, int GCThresh1, int GCThresh2,
-  std::string probeListFilename, std::string issueProbesFilename, std::string issueGapsFilename, int lineCounter,
+  int maximumRepeats, int minimumGC, int maximumGC,
+  std::string probeListFilename, std::string issueProbesFilename, std::string issueGapsFilename, int gapNumber,
   std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> &probes)
 {
   std::ofstream pl_file(probeListFilename, std::ofstream::app);
@@ -118,33 +125,23 @@ void ScanProbesPass2_3(std::vector<std::tuple<std::string, int, int>> probeCandi
       if(pos1 > end)
       {
         std::string sequence = roiSequence.substr(pos1 - roiSequenceStart, pos2 - pos1);
-        int counter = 0;
-        int C = 0;
-        int G = 0;
-        for(int i = 0; i < sequence.length(); i++)
+        int repeats;
+        int GC;
+        countRepeatsAndGC(sequence, repeats, GC);
+        if(repeats <= maximumRepeats && GC >= minimumGC && GC <= maximumGC)
         {
-          if(islower(sequence[i]))
-            counter++;
-          if(sequence[i] == 'C')
-            C++;
-          if(sequence[i] == 'G')
-            G++;
-        }
-        int GC = G + C;
-        if (counter <= repeatThresh && GC >= GCThresh1 && GC <= GCThresh2)
-        {
-          probes.push_back(std::make_tuple(chromosome, pos1, pos2, sequence, sequence.length(), counter, GC));
-          pl_file << chromosome << ' ' << pos1 << ' ' << pos2 << ' ' << sequence << ' ' << sequence.length() << ' ' << counter << ' ' << GC << std::endl;
+          probes.push_back(std::make_tuple(chromosome, pos1, pos2, sequence, sequence.length(), repeats, GC));
+          pl_file << chromosome << ' ' << pos1 << ' ' << pos2 << ' ' << sequence << ' ' << sequence.length() << ' ' << repeats << ' ' << GC << std::endl;
           end = pos2;
           done = true;
         }
         else
-          ip_file << '>' << chromosome << ':' << pos1 << '-' << pos2 << ' ' << counter << ' ' << GC << std::endl;
+          ip_file << '>' << chromosome << ':' << pos1 << '-' << pos2 << ' ' << repeats << ' ' << GC << std::endl;
         update = true;
       }
     }
     if(!done)
-      ig_file << "No probes found for gap " << lineCounter << std::endl;
+      ig_file << "No probes found for gap " << gapNumber << std::endl;
   }
   pl_file.close();
   ip_file.close();
@@ -157,7 +154,7 @@ int main(int argc, char **argv)
   std::string genome = "hg19";
   std::string location = "chr8:133000000-133100000";
   std::string output_directory = "./output";
-  while ((c = getopt (argc, argv, "g:l:o:")) != -1)
+  while((c = getopt(argc, argv, "g:l:o:")) != -1)
   {
     switch (c)
     {
@@ -197,8 +194,20 @@ int main(int argc, char **argv)
   const std::string igp2_filename = output_directory + "/issue_gaps_pass2.txt";
   const std::string pnpnop3s_filename = output_directory + "/probes_no_primers_no_overlaps_pass3_sorted.txt";
   const std::string pwpno_filename = output_directory + "/probes_w_primers_no_overlaps.txt";
+  const int probe_length = 120;
   const int max_length_from_rs = 80;
   const int max_length_from_rs2 = 110;
+  const int pass1_maximum_repeats = 10;
+  const int pass1_relaxed_minimum_GC = 48;
+  const int pass1_relaxed_maximum_GC = 84;
+  const int pass1_stringent_minimum_GC = 60;
+  const int pass1_stringent_maximum_GC = 72;
+  const int pass2_maximum_repeats = 20;
+  const int pass2_minimum_GC = 48;
+  const int pass2_maximum_GC = 84;
+  const int pass3_maximum_repeats = 25;
+  const int pass3_minimum_GC = 30;
+  const int pass3_maximum_GC = 96;
   const std::string forward_primer = "ATCGCACCAGCGTGT";
   const std::string reverse_primer = "CACTGCGGCTCCTCA";
 
@@ -265,12 +274,16 @@ int main(int argc, char **argv)
   {
     std::vector<std::tuple<std::string, int, int>> probe_candidates;
     for(int i = 0; i <= max_length_from_rs; i++)
-      probe_candidates.push_back(std::make_tuple(chromosome, (*it)-i-120, (*it)-i));
-    ScanProbesPass1(probe_candidates, roi_sequence, roi_start, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "upstream", probes);
+      probe_candidates.push_back(std::make_tuple(chromosome, (*it) - i - probe_length, (*it) - i));
+    ScanProbesPass1(probe_candidates, roi_sequence, roi_start,
+      pass1_maximum_repeats, pass1_relaxed_minimum_GC, pass1_relaxed_maximum_GC, pass1_stringent_minimum_GC, pass1_stringent_maximum_GC,
+      pnp_filename, ip_filename, is_filename, "upstream", probes);
     probe_candidates.clear();
     for(int i = 0; i <= max_length_from_rs; i++)
-      probe_candidates.push_back(std::make_tuple(chromosome, (*it)+i, (*it)+i+120));
-    ScanProbesPass1(probe_candidates, roi_sequence, roi_start, 10, 48, 84, 60, 72, pnp_filename, ip_filename, is_filename, "downstream", probes);
+      probe_candidates.push_back(std::make_tuple(chromosome, (*it) + i, (*it) + i + probe_length));
+    ScanProbesPass1(probe_candidates, roi_sequence, roi_start,
+      pass1_maximum_repeats, pass1_relaxed_minimum_GC, pass1_relaxed_maximum_GC, pass1_stringent_minimum_GC, pass1_stringent_maximum_GC,
+      pnp_filename, ip_filename, is_filename, "downstream", probes);
   }
 
   std::sort(probes.begin(), probes.end(), compareChromThenStart);
@@ -310,7 +323,7 @@ int main(int argc, char **argv)
         probes_no_overlap.push_back(*it);
         pnpno_file << std::get<0>(*it) << ' ' << std::get<1>(*it) << ' ' << std::get<2>(*it) << ' ' << std::get<3>(*it) <<
           ' ' << std::get<4>(*it) << ' ' << std::get<5>(*it) << ' ' << std::get<6>(*it) << std::endl;
-        if(std::get<1>(*it) - end + 10 > 120)
+        if(std::get<1>(*it) - end + 10 > probe_length)
         {
           gaps.push_back(std::make_tuple(std::get<0>(*it), end - 5, std::get<1>(*it) + 5));
           gaps_file << std::get<0>(*it) << '\t' << end - 5 << '\t' << std::get<1>(*it) + 5 << '\t' << 1 << std::endl;
@@ -329,7 +342,7 @@ int main(int argc, char **argv)
 
   std::unordered_set<int> closeRS;
   for(std::vector<int>::iterator it = restriction_sites.begin(); it != restriction_sites.end(); ++it)
-    for (int i = -max_length_from_rs2; i<=max_length_from_rs2; i++)
+    for(int i = -max_length_from_rs2; i <= max_length_from_rs2; i++)
       closeRS.insert((*it) + i);
 
   int l = 0;
@@ -340,10 +353,12 @@ int main(int argc, char **argv)
     int start = std::get<1>(*it);
     int end = std::get<2>(*it);
     std::vector<std::tuple<std::string, int, int>> probe_candidates;
-    for(int i = start; i <= end-120; i++)
-      if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
-        probe_candidates.push_back(std::make_tuple(chromosome, i, i + 120));
-    ScanProbesPass2_3(probe_candidates, roi_sequence, roi_start, 20, 48, 84, pnpnop2_filename, ipp2_filename, ig_filename, l, probes);
+    for(int i = start; i <= end - probe_length; i++)
+      if(closeRS.find(i) != closeRS.end() || closeRS.find(i + probe_length) != closeRS.end())
+        probe_candidates.push_back(std::make_tuple(chromosome, i, i + probe_length));
+    ScanProbesPass2_3(probe_candidates, roi_sequence, roi_start,
+      pass2_maximum_repeats, pass2_minimum_GC, pass2_maximum_GC,
+      pnpnop2_filename, ipp2_filename, ig_filename, l, probes);
   }
 
   std::sort(probes.begin(), probes.end(), compareChromThenStart);
@@ -385,9 +400,9 @@ int main(int argc, char **argv)
       else
       {
         int start = std::get<1>(*it);
-        if (std::get<0>(*it)==chromosome && start-pos2+10>120 &&
-          (x[chromosome + ' ' + std::to_string((int)(pos2/5000))]<5 ||
-            x[chromosome + ' ' + std::to_string((int)(start/5000))]<5))
+        if (std::get<0>(*it)==chromosome && start - pos2 + 10 > probe_length &&
+          (x[chromosome + ' ' + std::to_string((int)(pos2 / 5000))] < 5 ||
+          x[chromosome + ' ' + std::to_string((int)(start / 5000))] < 5))
         {
           gaps.push_back(std::make_tuple(chromosome, pos2, start));
           gapsp2_file << chromosome << ' ' << pos2 << ' ' << start << std::endl;
@@ -410,10 +425,12 @@ int main(int argc, char **argv)
     int start = std::get<1>(*it);
     int end = std::get<2>(*it);
     std::vector<std::tuple<std::string, int, int>> probe_candidates;
-    for(int i = start; i <= end-120; i++)
-      if(closeRS.find(i) != closeRS.end() || closeRS.find(i + 120) != closeRS.end())
-        probe_candidates.push_back(std::make_tuple(chromosome, i, i + 120));
-    ScanProbesPass2_3(probe_candidates, roi_sequence, roi_start, 25, 30, 96, pnpnop3_filename, ipp3_filename, igp2_filename, l, probes);
+    for(int i = start; i <= end - probe_length; i++)
+      if(closeRS.find(i) != closeRS.end() || closeRS.find(i + probe_length) != closeRS.end())
+        probe_candidates.push_back(std::make_tuple(chromosome, i, i + probe_length));
+    ScanProbesPass2_3(probe_candidates, roi_sequence, roi_start,
+      pass3_maximum_repeats, pass3_minimum_GC, pass3_maximum_GC,
+      pnpnop3_filename, ipp3_filename, igp2_filename, l, probes);
   }
 
   std::sort(probes.begin(), probes.end(), compareChromThenStart);
