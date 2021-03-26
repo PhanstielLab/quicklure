@@ -66,7 +66,7 @@ void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandida
           backup_probe = std::make_tuple(chromosome, start, end, sequence, sequence.length(), repeats, GC);
       }
       else
-        ip_file << description << ' ' << repeats << ' ' << GC << ' ' << sequence << std::endl;
+        ip_file << description << ' ' << repeats << ' ' << GC << std::endl;
     }
     if(!done)
     {
