@@ -45,9 +45,10 @@ void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandida
     bool done = false;
     for(std::vector<std::tuple<std::string, int, int>>::iterator it = probeCandidates.begin(); it != probeCandidates.end(); ++it)
     {
-      std::string chromosome = std::get<0>(*it);
-      int start = std::get<1>(*it);
-      int end = std::get<2>(*it);
+      std::string chromosome;
+      int start;
+      int end;
+      std::tie(chromosome, start, end) = *it;
       std::string description = '>' + chromosome + ':' + std::to_string(start) + '-' + std::to_string(end);
       std::string sequence = roiSequence.substr(start - roiSequenceStart, end - start);
       int repeats;
@@ -79,9 +80,10 @@ void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandida
       else
       {
         std::vector<std::tuple<std::string, int, int>>::iterator first = probeCandidates.begin();
-        std::string chromosome = std::get<0>(*first);
-        int start = std::get<1>(*first);
-        int end = std::get<2>(*first);
+        std::string chromosome;
+        int start;
+        int end;
+        std::tie(chromosome, start, end) = *first;
         is_file << "No " << side << " probes found for:" << chromosome << ' ' << (side == "upstream" ? end : start) << std::endl;
       }
     }
@@ -117,9 +119,7 @@ void ScanProbesPass2_3(std::vector<std::tuple<std::string, int, int>> probeCandi
     {
       if(update)
       {
-        chromosome = std::get<0>(*it);
-        pos1 = std::get<1>(*it);
-        pos2 = std::get<2>(*it);
+        std::tie(chromosome, pos1, pos2) = *it;
         update = false;
       }
       if(pos1 > end)
@@ -314,9 +314,7 @@ int main(int argc, char **argv)
         probes_no_overlap.push_back(*it);
         pnpno_file << std::get<0>(*it) << ' ' << std::get<1>(*it) << ' ' << std::get<2>(*it) << ' ' << std::get<3>(*it) <<
           ' ' << std::get<4>(*it) << ' ' << std::get<5>(*it) << ' ' << std::get<6>(*it) << std::endl;
-        chromosome = std::get<0>(*it);
-        start = std::get<1>(*it);
-        end = std::get<2>(*it);
+        std::tie(chromosome, start, end, std::ignore, std::ignore, std::ignore, std::ignore) = *it;
       }
       else if(std::get<1>(*it) >= end)
       {
@@ -328,9 +326,7 @@ int main(int argc, char **argv)
           gaps.push_back(std::make_tuple(std::get<0>(*it), end - 5, std::get<1>(*it) + 5));
           gaps_file << std::get<0>(*it) << '\t' << end - 5 << '\t' << std::get<1>(*it) + 5 << '\t' << 1 << std::endl;
         }
-        chromosome = std::get<0>(*it);
-        start = std::get<1>(*it);
-        end = std::get<2>(*it);
+        std::tie(chromosome, start, end, std::ignore, std::ignore, std::ignore, std::ignore) = *it;
       }
     }
   }
@@ -349,9 +345,10 @@ int main(int argc, char **argv)
   for(std::vector<std::tuple<std::string, int, int>>::iterator it = gaps.begin(); it != gaps.end(); ++it)
   {
     l++;
-    std::string chromosome = std::get<0>(*it);
-    int start = std::get<1>(*it);
-    int end = std::get<2>(*it);
+    std::string chromosome;
+    int start;
+    int end;
+    std::tie(chromosome, start, end) = *it;
     std::vector<std::tuple<std::string, int, int>> probe_candidates;
     for(int i = start; i <= end - probe_length; i++)
       if(closeRS.find(i) != closeRS.end() || closeRS.find(i + probe_length) != closeRS.end())
@@ -392,24 +389,18 @@ int main(int argc, char **argv)
     for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
     {
       if(chromosome.empty())
-      {
-        chromosome = std::get<0>(*it);
-        pos1 = std::get<1>(*it);
-        pos2 = std::get<2>(*it);
-      }
+        std::tie(chromosome, pos1, pos2, std::ignore, std::ignore, std::ignore, std::ignore) = *it;
       else
       {
         int start = std::get<1>(*it);
-        if (std::get<0>(*it)==chromosome && start - pos2 + 10 > probe_length &&
+        if (std::get<0>(*it) == chromosome && start - pos2 + 10 > probe_length &&
           (x[chromosome + ' ' + std::to_string((int)(pos2 / 5000))] < 5 ||
           x[chromosome + ' ' + std::to_string((int)(start / 5000))] < 5))
         {
           gaps.push_back(std::make_tuple(chromosome, pos2, start));
           gapsp2_file << chromosome << ' ' << pos2 << ' ' << start << std::endl;
         }
-        chromosome = std::get<0>(*it);
-        pos1 = std::get<1>(*it);
-        pos2 = std::get<2>(*it);
+        std::tie(chromosome, pos1, pos2, std::ignore, std::ignore, std::ignore, std::ignore) = *it;
       }
     }
   }
@@ -421,9 +412,10 @@ int main(int argc, char **argv)
   for(std::vector<std::tuple<std::string, int, int>>::iterator it = gaps.begin(); it != gaps.end(); ++it)
   {
     l++;
-    std::string chromosome = std::get<0>(*it);
-    int start = std::get<1>(*it);
-    int end = std::get<2>(*it);
+    std::string chromosome;
+    int start;
+    int end;
+    std::tie(chromosome, start, end) = *it;
     std::vector<std::tuple<std::string, int, int>> probe_candidates;
     for(int i = start; i <= end - probe_length; i++)
       if(closeRS.find(i) != closeRS.end() || closeRS.find(i + probe_length) != closeRS.end())
