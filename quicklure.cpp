@@ -172,7 +172,7 @@ int main(int argc, char **argv)
           " [-e restriction enzyme (default: " << restriction_enzyme << ")]" <<
           " [-l location (default: " << location << ")]" <<
           " [-o output directory (default: " << output_directory << ") ]" <<
-          " [-h / -?]" << std::endl;
+          " [-h]" << std::endl;
         return 0;
     }
   }
