@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -177,6 +178,9 @@ int main(int argc, char **argv)
     }
   }
 
+  if(!std::filesystem::exists(output_directory))
+    std::filesystem::create_directory(output_directory);
+
   const std::string input_directory = ".";
   const std::string re_filename = input_directory + '/' + genome + '_' + restriction_enzyme + ".txt";
   const std::string tb_bin_filename = input_directory + "/twoBitToFa";
@@ -338,7 +342,7 @@ int main(int argc, char **argv)
   gaps_file.close();
   probes = probes_no_overlap;
 
-  system(("cp " + pnpno_filename + ' ' + pnpnop2_filename).c_str());
+  std::filesystem::copy_file(pnpno_filename, pnpnop2_filename);
 
   std::unordered_set<int> closeRS;
   for(std::vector<int>::iterator it = restriction_sites.begin(); it != restriction_sites.end(); ++it)
@@ -410,7 +414,7 @@ int main(int argc, char **argv)
   }
   gapsp2_file.close();
 
-  system(("cp " + pnpnop2s_filename + ' ' + pnpnop3_filename).c_str());
+  std::filesystem::copy_file(pnpnop2s_filename, pnpnop3_filename);
 
   l = 0;
   for(std::vector<std::tuple<std::string, int, int>>::iterator it = gaps.begin(); it != gaps.end(); ++it)
