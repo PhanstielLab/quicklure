@@ -2,6 +2,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <fstream>
+#include <iostream>
 #include <iterator>
 #include <map>
 #include <regex>
@@ -146,14 +147,18 @@ int main(int argc, char **argv)
 {
   int c;
   std::string genome = "hg19";
+  std::string restriction_enzyme = "DpnII";
   std::string location = "chr8:133000000-133100000";
   std::string output_directory = "./output";
-  while((c = getopt(argc, argv, "g:l:o:")) != -1)
+  while((c = getopt(argc, argv, "g:e:l:o:h")) != -1)
   {
     switch (c)
     {
       case 'g':
         genome = optarg;
+        break;
+      case 'e':
+        restriction_enzyme = optarg;
         break;
       case 'l':
         location = optarg;
@@ -161,16 +166,21 @@ int main(int argc, char **argv)
       case 'o':
         output_directory = optarg;
         break;
-      case '?':
-        return 1;
+      case 'h':
+        std::cout << "Usage: " << argv[0] <<
+          " [-g genome ID (default: " << genome << ")]" <<
+          " [-e restriction enzyme (default: " << restriction_enzyme << ")]" <<
+          " [-l location (default: " << location << ")]" <<
+          " [-o output directory (default: " << output_directory << ") ]" <<
+          " [-h / -?]" << std::endl;
+        return 0;
     }
   }
 
-  const std::string restriction_enzyme = "DpnII";
   const std::string input_directory = ".";
   const std::string re_filename = input_directory + '/' + genome + '_' + restriction_enzyme + ".txt";
   const std::string tb_bin_filename = input_directory + "/twoBitToFa";
-  const std::string tb_filename = input_directory + "/hg19.2bit";
+  const std::string tb_filename = input_directory + '/' + genome + ".2bit";
   const std::string rs_filename = output_directory + "/restriction_sites.txt";
   const std::string pnp_filename = output_directory + "/probes_no_primers.txt";
   const std::string ip_filename = output_directory + "/issue_probes.txt";
