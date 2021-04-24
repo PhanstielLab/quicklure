@@ -342,7 +342,7 @@ int main(int argc, char **argv)
   gaps_file.close();
   probes = probes_no_overlap;
 
-  std::filesystem::copy_file(pnpno_filename, pnpnop2_filename);
+  std::filesystem::copy_file(pnpno_filename, pnpnop2_filename, std::filesystem::copy_options::overwrite_existing);
 
   std::unordered_set<int> closeRS;
   for(std::vector<int>::iterator it = restriction_sites.begin(); it != restriction_sites.end(); ++it)
@@ -414,7 +414,7 @@ int main(int argc, char **argv)
   }
   gapsp2_file.close();
 
-  std::filesystem::copy_file(pnpnop2s_filename, pnpnop3_filename);
+  std::filesystem::copy_file(pnpnop2s_filename, pnpnop3_filename, std::filesystem::copy_options::overwrite_existing);
 
   l = 0;
   for(std::vector<std::tuple<std::string, int, int>>::iterator it = gaps.begin(); it != gaps.end(); ++it)
