@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <ios>
 #include <iostream>
 #include <iterator>
 #include <map>
@@ -144,6 +145,38 @@ void ScanProbesPass2_3(std::vector<std::tuple<std::string, int, int>> probeCandi
   ig_file.close();
 }
 
+void countBases(const std::string sequence, int &A, int &C, int &G, int &T, int &N, int &other)
+{
+  A = 0;
+  C = 0;
+  G = 0;
+  T = 0;
+  N = 0;
+  for(int i = 0; i < sequence.length(); i++)
+  {
+    switch(toupper(sequence[i]))
+    {
+      case 'A':
+        A++;
+        break;
+      case 'C':
+        C++;
+        break;
+      case 'G':
+        G++;
+        break;
+      case 'T':
+        T++;
+        break;
+      case 'N':
+        N++;
+        break;
+      default:
+        other++;
+    }
+  }
+}
+
 int main(int argc, char **argv)
 {
   int c;
@@ -202,6 +235,8 @@ int main(int argc, char **argv)
   const std::string igp2_filename = output_directory + "/issue_gaps_pass2.txt";
   const std::string pnpnop3s_filename = output_directory + "/probes_no_primers_no_overlaps_pass3_sorted.txt";
   const std::string pwpno_filename = output_directory + "/probes_w_primers_no_overlaps.txt";
+  const std::string probes_bed_filename = output_directory + "/probes.bed";
+  const std::string all_fragments_bed_filename = output_directory + "/all_fragments.bed";
   const int probe_length = 120;
   const int max_length_from_rs = 80;
   const int max_length_from_rs2 = 110;
@@ -449,6 +484,71 @@ int main(int argc, char **argv)
       pwpno_file << std::get<0>(*it) << '\t' << std::get<1>(*it) << '\t' << std::get<2>(*it) << '\t' <<
         forward_primer + std::get<3>(*it) + reverse_primer << '\t' << std::get<4>(*it) + forward_primer.length() + reverse_primer.length() << std::endl;
   pwpno_file.close();
+
+  std::ofstream probes_file(probes_bed_filename);
+  if(probes_file.good())
+  {
+    probes_file.setf(std::ios::fixed);
+    probes_file.precision(6);
+    probes_file << "chr" << '\t' << "start" << '\t' << "stop" << '\t' <<
+      "shift" << '\t' << "resFrag" << '\t' << "dir" << '\t' <<
+      "pct_at" << '\t' << "pct_gc" << '\t' <<
+      "seq" << '\t' << "pass" << std::endl;
+    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
+    {
+      std::string sequence = std::get<3>(*it);
+      int A;
+      int C;
+      int G;
+      int T;
+      int N;
+      int other;
+      countBases(sequence, A, C, G, T, N, other);
+      probes_file << std::get<0>(*it) << '\t' << std::get<1>(*it) << '\t' << std::get<2>(*it) << '\t' <<
+        "shift" << '\t' << "resFrag" << '\t' << "dir" << '\t' <<
+        (double)(A + T) / sequence.length() << '\t' << (double)(G + C) / sequence.length() << '\t' <<
+        sequence << '\t' << "pass" << std::endl;
+    }
+  }
+  probes_file.close();
+
+  std::ofstream all_fragments_file(all_fragments_bed_filename);
+  if(all_fragments_file.good())
+  {
+    all_fragments_file.setf(std::ios::fixed);
+    all_fragments_file.precision(6);
+    if(restriction_sites[0] != roi_start + 1)
+      restriction_sites.insert(restriction_sites.begin(), roi_start + 1);
+    if(restriction_sites[restriction_sites.size() - 1] != roi_end + 1)
+      restriction_sites.push_back(roi_end + 1);
+    all_fragments_file << '#' << "1_usercol" << '\t' << "2_usercol" << '\t' << "3_usercol" << '\t' << "4_usercol" << '\t' <<
+      "5_usercol" << '\t' << "6_usercol" << '\t' << "7_usercol" << '\t' << "8_pct_at" << '\t' << "9_pct_gc" << '\t' <<
+      "10_num_A" << '\t' << "11_num_C" << '\t' << "12_num_G" << '\t' << "13_num_T" << '\t' << "14_num_N" << '\t' <<
+      "15_num_oth" << '\t' << "16_seq_len" << '\t' << "17_seq" << std::endl;
+    for(std::vector<int>::iterator it = restriction_sites.begin(); it != restriction_sites.end(); ++it)
+    {
+      std::vector<int>::iterator it2 = std::next(it);
+      if(it2 == restriction_sites.end())
+        break;
+      int relative_start = *it - roi_start - 1;
+      int relative_end = *it2 - roi_start - 1;
+      std::string sequence = roi_sequence.substr(relative_start, relative_end - relative_start);
+      int A;
+      int C;
+      int G;
+      int T;
+      int N;
+      int other;
+      countBases(sequence, A, C, G, T, N, other);
+      all_fragments_file << location << '\t' << relative_start << '\t' << relative_end << '\t' <<
+        std::distance(restriction_sites.begin(), it) + 1 << '\t' << std::distance(restriction_sites.begin(), it) + 1 << '\t' <<
+        (it == restriction_sites.begin() ? "None" : "Re1") << '\t' << (std::next(it2) == restriction_sites.end() ? "None" : "Re1") << '\t' <<
+        (double)(A + T) / sequence.length() << '\t' << (double)(G + C) / sequence.length() << '\t' <<
+        A << '\t' << C << '\t' << G << '\t' << T << '\t' << N << '\t' << other << '\t' <<
+        sequence.length() << '\t' << sequence << std::endl;
+    }
+  }
+  all_fragments_file.close();
 
   return 0;
 }
