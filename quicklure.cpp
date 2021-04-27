@@ -37,14 +37,14 @@ void countRepeatsAndGC(const std::string sequence, int &repeats, int &GC)
 void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandidates, std::string roiSequence, int roiSequenceStart,
   int maximumRepeats, int relaxedMinimumGC, int relaxedMaximumGC, int stringentMinimumGC, int stringentMaximumGC,
   std::string probeListFilename, std::string issueProbesFilename, std::string issueSitesFilename, std::string side,
-  std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> &probes)
+  std::vector<std::tuple<std::string, int, int, std::string, int, int, int, int>> &probes)
 {
   std::ofstream pl_file(probeListFilename, std::ofstream::app);
   std::ofstream ip_file(issueProbesFilename, std::ofstream::app);
   std::ofstream is_file(issueSitesFilename, std::ofstream::app);
   if(pl_file.good() && ip_file.good() && is_file.good())
   {
-    std::tuple<std::string, int, int, std::string, int, int, int> backup_probe;
+    std::tuple<std::string, int, int, std::string, int, int, int, int> backup_probe;
     bool done = false;
     for(std::vector<std::tuple<std::string, int, int>>::iterator it = probeCandidates.begin(); it != probeCandidates.end(); ++it)
     {
@@ -61,13 +61,13 @@ void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandida
       {
         if(GC >= stringentMinimumGC && GC <= stringentMaximumGC)
         {
-          probes.push_back(std::make_tuple(chromosome, start, end, sequence, sequence.length(), repeats, GC));
+          probes.push_back(std::make_tuple(chromosome, start, end, sequence, sequence.length(), repeats, GC, 1));
           pl_file << description << ' ' << sequence << ' ' << sequence.length() << ' ' << repeats << ' ' << GC << std::endl;
           done = true;
           break;
         }
         else if(std::get<0>(backup_probe).empty())
-          backup_probe = std::make_tuple(chromosome, start, end, sequence, sequence.length(), repeats, GC);
+          backup_probe = std::make_tuple(chromosome, start, end, sequence, sequence.length(), repeats, GC, 1);
       }
       else
         ip_file << description << ' ' << repeats << ' ' << GC << std::endl;
@@ -98,8 +98,8 @@ void ScanProbesPass1(std::vector<std::tuple<std::string, int, int>> probeCandida
 
 void ScanProbesPass2_3(std::vector<std::tuple<std::string, int, int>> probeCandidates, std::string roiSequence, int roiSequenceStart,
   int maximumRepeats, int minimumGC, int maximumGC,
-  std::string probeListFilename, std::string issueProbesFilename, std::string issueGapsFilename, int gapNumber,
-  std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> &probes)
+  std::string probeListFilename, std::string issueProbesFilename, std::string issueGapsFilename, int gapNumber, int pass,
+  std::vector<std::tuple<std::string, int, int, std::string, int, int, int, int>> &probes)
 {
   std::ofstream pl_file(probeListFilename, std::ofstream::app);
   std::ofstream ip_file(issueProbesFilename, std::ofstream::app);
@@ -127,7 +127,7 @@ void ScanProbesPass2_3(std::vector<std::tuple<std::string, int, int>> probeCandi
         countRepeatsAndGC(sequence, repeats, GC);
         if(repeats <= maximumRepeats && GC >= minimumGC && GC <= maximumGC)
         {
-          probes.push_back(std::make_tuple(chromosome, pos1, pos2, sequence, sequence.length(), repeats, GC));
+          probes.push_back(std::make_tuple(chromosome, pos1, pos2, sequence, sequence.length(), repeats, GC, pass));
           pl_file << chromosome << ' ' << pos1 << ' ' << pos2 << ' ' << sequence << ' ' << sequence.length() << ' ' << repeats << ' ' << GC << std::endl;
           end = pos2;
           done = true;
@@ -312,7 +312,7 @@ int main(int argc, char **argv)
   re_file.close();
   rs_file.close();
 
-  std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> probes;
+  std::vector<std::tuple<std::string, int, int, std::string, int, int, int, int>> probes;
   for(std::vector<int>::iterator it = restriction_sites.begin(); it != restriction_sites.end(); ++it)
   {
     std::vector<std::tuple<std::string, int, int>> probe_candidates;
@@ -330,12 +330,12 @@ int main(int argc, char **argv)
   }
 
   std::sort(probes.begin(), probes.end());
-  std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator last = std::unique(probes.begin(), probes.end());
+  std::vector<std::tuple<std::string, int, int, std::string, int, int, int, int>>::iterator last = std::unique(probes.begin(), probes.end());
   probes.erase(last, probes.end());
   std::ofstream pnps_file(pnps_filename);
   if(pnps_file.good())
   {
-    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
+    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
       pnps_file << std::get<0>(*it) << ' ' << std::get<1>(*it) << ' ' << std::get<2>(*it) << ' ' << std::get<3>(*it) <<
         ' ' << std::get<4>(*it) << ' ' << std::get<5>(*it) << ' ' << std::get<6>(*it) << std::endl;
   }
@@ -344,20 +344,20 @@ int main(int argc, char **argv)
   chromosome.clear();
   int start;
   int end;
-  std::vector<std::tuple<std::string, int, int, std::string, int, int, int>> probes_no_overlap;
+  std::vector<std::tuple<std::string, int, int, std::string, int, int, int, int>> probes_no_overlap;
   std::vector<std::tuple<std::string, int, int>> gaps;
   std::ofstream pnpno_file(pnpno_filename);
   std::ofstream gaps_file(gaps_filename, std::ofstream::app);
   if(pnpno_file.good() && gaps_file.good())
   {
-    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
+    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
     {
       if(chromosome.empty() || std::get<0>(*it) != chromosome)
       {
         probes_no_overlap.push_back(*it);
         pnpno_file << std::get<0>(*it) << ' ' << std::get<1>(*it) << ' ' << std::get<2>(*it) << ' ' << std::get<3>(*it) <<
           ' ' << std::get<4>(*it) << ' ' << std::get<5>(*it) << ' ' << std::get<6>(*it) << std::endl;
-        std::tie(chromosome, start, end, std::ignore, std::ignore, std::ignore, std::ignore) = *it;
+        std::tie(chromosome, start, end, std::ignore, std::ignore, std::ignore, std::ignore, std::ignore) = *it;
       }
       else if(std::get<1>(*it) >= end)
       {
@@ -369,7 +369,7 @@ int main(int argc, char **argv)
           gaps.push_back(std::make_tuple(std::get<0>(*it), end - 5, std::get<1>(*it) + 5));
           gaps_file << std::get<0>(*it) << '\t' << end - 5 << '\t' << std::get<1>(*it) + 5 << '\t' << 1 << std::endl;
         }
-        std::tie(chromosome, start, end, std::ignore, std::ignore, std::ignore, std::ignore) = *it;
+        std::tie(chromosome, start, end, std::ignore, std::ignore, std::ignore, std::ignore, std::ignore) = *it;
       }
     }
   }
@@ -398,7 +398,7 @@ int main(int argc, char **argv)
         probe_candidates.push_back(std::make_tuple(chromosome, i, i + probe_length));
     ScanProbesPass2_3(probe_candidates, roi_sequence, roi_start,
       pass2_maximum_repeats, pass2_minimum_GC, pass2_maximum_GC,
-      pnpnop2_filename, ipp2_filename, ig_filename, l, probes);
+      pnpnop2_filename, ipp2_filename, ig_filename, l, 2, probes);
   }
 
   std::sort(probes.begin(), probes.end());
@@ -406,13 +406,13 @@ int main(int argc, char **argv)
   probes.erase(last, probes.end());
   std::ofstream pnpnop2s_file(pnpnop2s_filename);
   if(pnpnop2s_file.good())
-    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
+    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
       pnpnop2s_file << std::get<0>(*it) << ' ' << std::get<1>(*it) << ' ' << std::get<2>(*it) << ' ' << std::get<3>(*it) <<
         ' ' << std::get<4>(*it) << ' ' << std::get<5>(*it) << ' ' << std::get<6>(*it) << std::endl;
   pnpnop2s_file.close();
 
   std::map<std::string, int> x;
-  for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
+  for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
   {
     std::string key = std::get<0>(*it) + ' ' + std::to_string((int)((std::get<1>(*it) + 60) / 5000));
     std::map<std::string, int>::iterator match = x.find(key);
@@ -429,10 +429,10 @@ int main(int argc, char **argv)
   std::ofstream gapsp2_file(gapsp2_filename);
   if(gapsp2_file.good())
   {
-    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
+    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
     {
       if(chromosome.empty())
-        std::tie(chromosome, pos1, pos2, std::ignore, std::ignore, std::ignore, std::ignore) = *it;
+        std::tie(chromosome, pos1, pos2, std::ignore, std::ignore, std::ignore, std::ignore, std::ignore) = *it;
       else
       {
         int start = std::get<1>(*it);
@@ -443,7 +443,7 @@ int main(int argc, char **argv)
           gaps.push_back(std::make_tuple(chromosome, pos2, start));
           gapsp2_file << chromosome << ' ' << pos2 << ' ' << start << std::endl;
         }
-        std::tie(chromosome, pos1, pos2, std::ignore, std::ignore, std::ignore, std::ignore) = *it;
+        std::tie(chromosome, pos1, pos2, std::ignore, std::ignore, std::ignore, std::ignore, std::ignore) = *it;
       }
     }
   }
@@ -465,7 +465,7 @@ int main(int argc, char **argv)
         probe_candidates.push_back(std::make_tuple(chromosome, i, i + probe_length));
     ScanProbesPass2_3(probe_candidates, roi_sequence, roi_start,
       pass3_maximum_repeats, pass3_minimum_GC, pass3_maximum_GC,
-      pnpnop3_filename, ipp3_filename, igp2_filename, l, probes);
+      pnpnop3_filename, ipp3_filename, igp2_filename, l, 3, probes);
   }
 
   std::sort(probes.begin(), probes.end());
@@ -473,14 +473,14 @@ int main(int argc, char **argv)
   probes.erase(last, probes.end());
   std::ofstream pnpnop3s_file(pnpnop3s_filename);
   if(pnpnop3s_file.good())
-    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
+    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
       pnpnop3s_file << std::get<0>(*it) << ' ' << std::get<1>(*it) << ' ' << std::get<2>(*it) << ' ' << std::get<3>(*it) <<
         ' ' << std::get<4>(*it) << ' ' << std::get<5>(*it) << ' ' << std::get<6>(*it) << std::endl;
   pnpnop3s_file.close();
 
   std::ofstream pwpno_file(pwpno_filename);
   if(pwpno_file.good())
-    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
+    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
       pwpno_file << std::get<0>(*it) << '\t' << std::get<1>(*it) << '\t' << std::get<2>(*it) << '\t' <<
         forward_primer + std::get<3>(*it) + reverse_primer << '\t' << std::get<4>(*it) + forward_primer.length() + reverse_primer.length() << std::endl;
   pwpno_file.close();
@@ -494,7 +494,7 @@ int main(int argc, char **argv)
       "shift" << '\t' << "resFrag" << '\t' << "dir" << '\t' <<
       "pct_at" << '\t' << "pct_gc" << '\t' <<
       "seq" << '\t' << "pass" << std::endl;
-    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
+    for(std::vector<std::tuple<std::string, int, int, std::string, int, int, int, int>>::iterator it = probes.begin(); it != probes.end(); ++it)
     {
       std::string sequence = std::get<3>(*it);
       int A;
@@ -505,9 +505,9 @@ int main(int argc, char **argv)
       int other;
       countBases(sequence, A, C, G, T, N, other);
       probes_file << std::get<0>(*it) << '\t' << std::get<1>(*it) << '\t' << std::get<2>(*it) << '\t' <<
-        "shift" << '\t' << "resFrag" << '\t' << "dir" << '\t' <<
+        std::string() << '\t' << std::string() << '\t' << std::string() << '\t' <<
         (double)(A + T) / sequence.length() << '\t' << (double)(G + C) / sequence.length() << '\t' <<
-        sequence << '\t' << "pass" << std::endl;
+        sequence << '\t' << std::get<7>(*it) << std::endl;
     }
   }
   probes_file.close();
